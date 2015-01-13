@@ -83,18 +83,12 @@ typedef struct{
 #define PR5_VALUE_10_MILLISECONDS      (FCY_CLK_MHZ*PR5_PERIOD_US/8)
 
 // -------------------- A36417_000 FAULTS/WARNINGS CONFIGURATION-------------------- //
-#define FAULT_BIT_ION_PUMP_OVER_CURRENT             FAULT_BIT_USER_DEFINED_1
-#define FAULT_BIT_ION_PUMP_OVER_VOLTAGE             FAULT_BIT_USER_DEFINED_2
-#define FAULT_BIT_ION_PUMP_UNDER_VOLTAGE            FAULT_BIT_USER_DEFINED_3
+#define _FAULT_ION_PUMP_OVER_CURRENT             _FAULT_1
+#define _FAULT_ION_PUMP_OVER_VOLTAGE             _FAULT_1
+#define _FAULT_ION_PUMP_UNDER_VOLTAGE            _FAULT_1
 
 // -------------------- A36417_000 STATUS BIT CONFIGURATION ------------------------ //
 
-
-
-// -------------------- A36417_000 FAULTS/WARNINGS CONFIGURATION-------------------- //
-#define FAULT_BIT_ION_PUMP_OVER_CURRENT         FAULT_BIT_USER_DEFINED_1
-#define FAULT_BIT_ION_PUMP_OVER_VOLTAGE         FAULT_BIT_USER_DEFINED_2
-#define FAULT_BIT_ION_PUMP_UNDER_VOLTAGE        FAULT_BIT_USER_DEFINED_3
 
 /*
 
@@ -180,8 +174,23 @@ RF3  (DAC LDAC)
 #define A36417_TRISG_VALUE 0b0000000000000000
 
 #define ION_PUMP_CURRENT_SCALE_FACTOR              1 //1V per 1uA
-#define ION_PUMP_VOLTAGE_SCALE_FACTOR              .501//1V per 1kV
+#define ION_PUMP_CURRENT_OVER_TRIP_POINT        555 //placeholder
 
+#define ION_PUMP_VOLTAGE_SCALE_FACTOR              .501//1V per 1kV
+#define ION_PUMP_VOLTAGE_UNDER_TRIP_POINT       555 //PLACEHOLDER
+
+#define TARGET_CURRENT_SCALE_FACTOR             1   //placeholder
+#define TARGET_CURRENT_OVER_TRIP_POINT          555 //placeholder
+
+#define _5V_MONITOR_SCALE_FACTOR                1 //placeholder
+
+#define _15V_MONITOR_SCALE_FACTOR               1 //placeholder
+
+#define MINUS_5V_MONITOR_SCALE_FACTOR           1 //placeholder
+
+
+#define ANALOG_OUT_SCALE_FACTOR             1
+#define ANALOG_OUT_INTERNAL_SCALE           1
 
 
 #endif	/* A36417_H */

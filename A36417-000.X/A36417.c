@@ -12,16 +12,16 @@ _FICD(PGD);
 void DoStateMachine(void);
 void InitializeA36417(void);
 void DoA36417_000(void);
+void SelfTestA36417(void);
 
 MCP4822 U11_MCP4822;
-
 
 unsigned int control_state;
 
 IonPumpControlData global_data_A36417_000;
 
 #define STATE_STARTUP                0x10
-#define STATE_WAITING_FOR_CONFIG     0x20
+#define STATE_SELF_TEST              0x20
 #define STATE_OPERATE                0x30
 
 int main (void){
@@ -36,8 +36,13 @@ void DoStateMachine(void){
    switch(control_state){
         case STATE_STARTUP:
             InitializeA36417();
-            control_state=STATE_OPERATE;
+            control_state=STATE_SELF_TEST;
             break;
+
+       case STATE_SELF_TEST:
+
+           control_state=STATE_OPERATE;
+           break;
 
         case STATE_OPERATE:
             DoA36417_000();
@@ -51,24 +56,55 @@ void DoStateMachine(void){
 }
 
 void DoA36417_000(void){
+    unsigned int EMCO_control_setpoint=0;
 
 if(_T5IF){
 
     _T5IF=0;
 
- // -------------------- CHECK FOR FAULTS ------------------- //
+    ETMAnalogScaleCalibrateADCReading(&global_data_A36417_000.analog_input_ion_pump_voltage);
+    ETMAnalogScaleCalibrateADCReading(&global_data_A36417_000.analog_input_target_current);
+    ETMAnalogScaleCalibrateADCReading(&global_data_A36417_000.analog_input_5V_monitor);
+    ETMAnalogScaleCalibrateADCReading(&global_data_A36417_000.analog_input_15V_monitor);
+    ETMAnalogScaleCalibrateADCReading(&global_data_A36417_000.analog_input_minus_5V_monitor);
 
+// -------------------- CHECK FOR FAULTS ------------------- //
 
     if (global_reset_faults) {
-      etm_can_system_debug_data.debug_0++;
-      etm_can_status_register.status_word_1 = 0x0000;
+      local_debug_data.debug_0++;
+      _FAULT_REGISTER = 0x0000;
       global_reset_faults = 0;
     }
 
+     if (ETMAnalogCheckUnderAbsolute(&global_data_A36417_000.analog_input_ion_pump_voltage)) {
+            _FAULT_ION_PUMP_UNDER_VOLTAGE=1;
+    }
 
+    if (ETMAnalogCheckOverAbsolute(&global_data_A36417_000.analog_input_ion_pump_current)) {
+            _FAULT_ION_PUMP_OVER_CURRENT=1;
+    }
+
+    if (ETMAnalogCheckOverAbsolute(&global_data_A36417_000.analog_input_ion_pump_voltage)) {
+           _FAULT_ION_PUMP_OVER_VOLTAGE=1;
+    }
+
+    //update EMCO setpoint
+
+    //Write to DAC
+    WriteMCP4822(&U11_MCP4822, MCP4822_OUTPUT_A_4096, EMCO_control_setpoint);
+}
+    return;
 }
 
-    return;
+void SelfTestA36417(void){
+    while(1){
+        if(_T5IF){
+            _T5IF=0;
+
+
+            return;
+        }
+    }
 }
 
 void InitializeA36417(void){
@@ -119,6 +155,63 @@ void InitializeA36417(void){
   _ADIF = 0;
   _ADIE = 1;
   _ADON = 1;
+
+
+  //Initialize analog input/output scaling
+
+    global_data_A36417_000.analog_input_ion_pump_current.fixed_scale                     = MACRO_DEC_TO_SCALE_FACTOR_16(ION_PUMP_CURRENT_SCALE_FACTOR);
+    global_data_A36417_000.analog_input_ion_pump_current.fixed_offset                    = 0;
+    global_data_A36417_000.analog_input_ion_pump_current.calibration_internal_scale      = MACRO_DEC_TO_CAL_FACTOR_2(1);
+    global_data_A36417_000.analog_input_ion_pump_current.calibration_internal_offset     = 0;
+    global_data_A36417_000.analog_input_ion_pump_current.calibration_external_scale      = MACRO_DEC_TO_CAL_FACTOR_2(1);
+    global_data_A36417_000.analog_input_ion_pump_current.calibration_external_offset     = 0;
+    global_data_A36417_000.analog_input_ion_pump_current.over_trip_point_absolute        = ION_PUMP_CURRENT_OVER_TRIP_POINT;
+
+    global_data_A36417_000.analog_input_ion_pump_voltage.fixed_scale                     = MACRO_DEC_TO_SCALE_FACTOR_16(ION_PUMP_VOLTAGE_SCALE_FACTOR);
+    global_data_A36417_000.analog_input_ion_pump_voltage.fixed_offset                    = 0;
+    global_data_A36417_000.analog_input_ion_pump_voltage.calibration_internal_scale      = MACRO_DEC_TO_CAL_FACTOR_2(1);
+    global_data_A36417_000.analog_input_ion_pump_voltage.calibration_internal_offset     = 0;
+    global_data_A36417_000.analog_input_ion_pump_voltage.calibration_external_scale      = MACRO_DEC_TO_CAL_FACTOR_2(1);
+    global_data_A36417_000.analog_input_ion_pump_voltage.calibration_external_offset     = 0;
+    global_data_A36417_000.analog_input_ion_pump_voltage.under_trip_point_absolute       = ION_PUMP_VOLTAGE_UNDER_TRIP_POINT;
+
+    global_data_A36417_000.analog_input_target_current.fixed_scale                     = MACRO_DEC_TO_SCALE_FACTOR_16(TARGET_CURRENT_SCALE_FACTOR);
+    global_data_A36417_000.analog_input_target_current.fixed_offset                    = 0;
+    global_data_A36417_000.analog_input_target_current.calibration_internal_scale      = MACRO_DEC_TO_CAL_FACTOR_2(1);
+    global_data_A36417_000.analog_input_target_current.calibration_internal_offset     = 0;
+    global_data_A36417_000.analog_input_target_current.calibration_external_scale      = MACRO_DEC_TO_CAL_FACTOR_2(1);
+    global_data_A36417_000.analog_input_target_current.calibration_external_offset     = 0;
+    global_data_A36417_000.analog_input_target_current.over_trip_point_absolute        = TARGET_CURRENT_OVER_TRIP_POINT;
+
+    global_data_A36417_000.analog_input_5V_monitor.fixed_scale                         = MACRO_DEC_TO_SCALE_FACTOR_16(_5V_MONITOR_SCALE_FACTOR);
+    global_data_A36417_000.analog_input_5V_monitor.fixed_offset                        = 0;
+    global_data_A36417_000.analog_input_5V_monitor.calibration_internal_scale          = MACRO_DEC_TO_CAL_FACTOR_2(1);
+    global_data_A36417_000.analog_input_5V_monitor.calibration_internal_offset         = 0;
+    global_data_A36417_000.analog_input_5V_monitor.calibration_external_scale          = MACRO_DEC_TO_CAL_FACTOR_2(1);
+    global_data_A36417_000.analog_input_5V_monitor.calibration_external_offset         = 0;
+
+    global_data_A36417_000.analog_input_15V_monitor.fixed_scale                     = MACRO_DEC_TO_SCALE_FACTOR_16(_15V_MONITOR_SCALE_FACTOR);
+    global_data_A36417_000.analog_input_15V_monitor.fixed_offset                    = 0;
+    global_data_A36417_000.analog_input_15V_monitor.calibration_internal_scale      = MACRO_DEC_TO_CAL_FACTOR_2(1);
+    global_data_A36417_000.analog_input_15V_monitor.calibration_internal_offset     = 0;
+    global_data_A36417_000.analog_input_15V_monitor.calibration_external_scale      = MACRO_DEC_TO_CAL_FACTOR_2(1);
+    global_data_A36417_000.analog_input_15V_monitor.calibration_external_offset     = 0;
+
+    global_data_A36417_000.analog_input_minus_5V_monitor.fixed_scale                     = MACRO_DEC_TO_SCALE_FACTOR_16(MINUS_5V_MONITOR_SCALE_FACTOR);
+    global_data_A36417_000.analog_input_minus_5V_monitor.fixed_offset                    = 0;
+    global_data_A36417_000.analog_input_minus_5V_monitor.calibration_internal_scale      = MACRO_DEC_TO_CAL_FACTOR_2(1);
+    global_data_A36417_000.analog_input_minus_5V_monitor.calibration_internal_offset     = 0;
+    global_data_A36417_000.analog_input_minus_5V_monitor.calibration_external_scale      = MACRO_DEC_TO_CAL_FACTOR_2(1);
+    global_data_A36417_000.analog_input_minus_5V_monitor.calibration_external_offset     = 0;
+
+    global_data_A36417_000.analog_output_emco_control.fixed_scale                     = MACRO_DEC_TO_SCALE_FACTOR_16(ANALOG_OUT_SCALE_FACTOR);
+    global_data_A36417_000.analog_output_emco_control.fixed_offset                    = 0;
+    global_data_A36417_000.analog_output_emco_control.calibration_internal_scale      = MACRO_DEC_TO_CAL_FACTOR_2(ANALOG_OUT_INTERNAL_SCALE);
+    global_data_A36417_000.analog_output_emco_control.calibration_internal_offset     = 0;
+    global_data_A36417_000.analog_output_emco_control.calibration_external_scale      = MACRO_DEC_TO_CAL_FACTOR_2(1);
+    global_data_A36417_000.analog_output_emco_control.calibration_external_offset     = 0;
+    global_data_A36417_000.analog_output_emco_control.set_point                       = 0;
+    global_data_A36417_000.analog_output_emco_control.enabled                         = 1;
 
    // Initialize the CAN module
   ETMCanInitialize();
