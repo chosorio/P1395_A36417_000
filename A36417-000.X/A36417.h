@@ -32,6 +32,7 @@ typedef struct{
 
 }IonPumpControlData;
 
+extern IonPumpControlData global_data_A36417_000;
 // ------------------------ CONFIGURE ADC MODULE ------------------- //
 
 
@@ -84,8 +85,8 @@ typedef struct{
 
 // -------------------- A36417_000 FAULTS/WARNINGS CONFIGURATION-------------------- //
 #define _FAULT_ION_PUMP_OVER_CURRENT             _FAULT_1
-#define _FAULT_ION_PUMP_OVER_VOLTAGE             _FAULT_1
-#define _FAULT_ION_PUMP_UNDER_VOLTAGE            _FAULT_1
+#define _FAULT_ION_PUMP_OVER_VOLTAGE             _FAULT_2
+#define _FAULT_ION_PUMP_UNDER_VOLTAGE            _FAULT_3
 
 // -------------------- A36417_000 STATUS BIT CONFIGURATION ------------------------ //
 
@@ -173,10 +174,10 @@ RF3  (DAC LDAC)
 #define A36417_TRISF_VALUE 0b0000000101001111
 #define A36417_TRISG_VALUE 0b0000000000000000
 
-#define ION_PUMP_CURRENT_SCALE_FACTOR              1 //1V per 1uA
+#define ION_PUMP_CURRENT_SCALE_FACTOR           1 //1V per 1uA
 #define ION_PUMP_CURRENT_OVER_TRIP_POINT        555 //placeholder
 
-#define ION_PUMP_VOLTAGE_SCALE_FACTOR              .501//1V per 1kV
+#define ION_PUMP_VOLTAGE_SCALE_FACTOR           .501//1V per 1kV
 #define ION_PUMP_VOLTAGE_UNDER_TRIP_POINT       555 //PLACEHOLDER
 
 #define TARGET_CURRENT_SCALE_FACTOR             1   //placeholder

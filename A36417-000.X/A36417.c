@@ -101,7 +101,6 @@ void SelfTestA36417(void){
         if(_T5IF){
             _T5IF=0;
 
-
             return;
         }
     }
