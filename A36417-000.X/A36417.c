@@ -104,13 +104,17 @@ void SelfTestA36417(void){
             _T5IF=0;
 
             //Check 5V, -5V, 15V monitors
+            ETMAnalogScaleCalibrateADCReading(&global_data_A36417_000.analog_input_5V_monitor);
+            ETMAnalogScaleCalibrateADCReading(&global_data_A36417_000.analog_input_15V_monitor);
+            ETMAnalogScaleCalibrateADCReading(&global_data_A36417_000.analog_input_minus_5V_monitor);
+            
             unsigned int _5Vmonitor=global_data_A36417_000.analog_input_5V_monitor.reading_scaled_and_calibrated;
             unsigned int _15Vmonitor=global_data_A36417_000.analog_input_15V_monitor.reading_scaled_and_calibrated;
             unsigned int minus_5Vmonitor=global_data_A36417_000.analog_input_minus_5V_monitor.reading_scaled_and_calibrated;
 
-            if(_5Vmonitor>4900&&_5Vmonitor<5100){
-                if(_15Vmonitor>14900&&_15Vmonitor<15100){
-                    if(minus_5Vmonitor>4900&&minus_5Vmonitor<5100){
+            if(_5Vmonitor>2400&&_5Vmonitor<2600){
+                if(_15Vmonitor>2400&&_15Vmonitor<2600){
+                    if(minus_5Vmonitor>1570&&minus_5Vmonitor<1770){
                         return;
                     }
                 }
