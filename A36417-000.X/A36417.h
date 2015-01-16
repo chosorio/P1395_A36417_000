@@ -91,6 +91,9 @@ extern IonPumpControlData global_data_A36417_000;
 // -------------------- A36417_000 STATUS BIT CONFIGURATION ------------------------ //
 
 
+#define _BOARD_SELF_CHECK_FAILED    _STATUS_3
+
+
 /*
 
 -----------Digital Input Pins------------
@@ -174,6 +177,8 @@ RF3  (DAC LDAC)
 #define A36417_TRISF_VALUE 0b0000000101001111
 #define A36417_TRISG_VALUE 0b0000000000000000
 
+
+#define SELF_TEST_FAIL_COUNT                    4
 #define ION_PUMP_CURRENT_SCALE_FACTOR           1 //1V per 1uA
 #define ION_PUMP_CURRENT_OVER_TRIP_POINT        555 //placeholder
 

@@ -2,7 +2,7 @@
 #include "MCP4822.h"
 
 _FOSC(ECIO & CSW_FSCM_OFF);
-_FWDT(WDT_ON & WDTPSA_64 & WDTPSB_8);  // 1 Second watchdog timer
+_FWDT(WDT_ON & WDTPSA_512 & WDTPSB_8);  // 8 Second watchdog timer
 _FBORPOR(PWRT_OFF & BORV_45 & PBOR_OFF & MCLR_EN);
 _FBS(WR_PROTECT_BOOT_OFF & NO_BOOT_CODE & NO_BOOT_EEPROM & NO_BOOT_RAM);
 _FSS(WR_PROT_SEC_OFF & NO_SEC_CODE & NO_SEC_EEPROM & NO_SEC_RAM);
@@ -40,11 +40,12 @@ void DoStateMachine(void){
             break;
 
        case STATE_SELF_TEST:
-
+           SelfTestA36417();
            control_state=STATE_OPERATE;
            break;
 
         case STATE_OPERATE:
+            _BOARD_SELF_CHECK_FAILED=0;
             DoA36417_000();
             ETMCanDoCan();
             break;
@@ -97,11 +98,29 @@ if(_T5IF){
 }
 
 void SelfTestA36417(void){
+    int test_count=0;
     while(1){
         if(_T5IF){
             _T5IF=0;
 
-            return;
+            //Check 5V, -5V, 15V monitors
+            unsigned int _5Vmonitor=global_data_A36417_000.analog_input_5V_monitor.reading_scaled_and_calibrated;
+            unsigned int _15Vmonitor=global_data_A36417_000.analog_input_15V_monitor.reading_scaled_and_calibrated;
+            unsigned int minus_5Vmonitor=global_data_A36417_000.analog_input_minus_5V_monitor.reading_scaled_and_calibrated;
+
+            if(_5Vmonitor>4900&&_5Vmonitor<5100){
+                if(_15Vmonitor>14900&&_15Vmonitor<15100){
+                    if(minus_5Vmonitor>4900&&minus_5Vmonitor<5100){
+                        return;
+                    }
+                }
+            }
+            
+            if(test_count>SELF_TEST_FAIL_COUNT){
+                //Set Board self check fail bit.
+                _BOARD_SELF_CHECK_FAILED=1;
+            }
+            
         }
     }
 }
@@ -227,8 +246,6 @@ void InitializeA36417(void){
   __delay32(1000000);
   ClrWdt();
   PIN_LED_TEST_POINT_B = 1;
-
-
 
 }
 
