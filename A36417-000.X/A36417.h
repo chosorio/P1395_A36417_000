@@ -19,6 +19,7 @@
 
 
 
+
 typedef struct{
     AnalogInput analog_input_ion_pump_current;
     AnalogInput analog_input_ion_pump_voltage;
@@ -32,6 +33,20 @@ typedef struct{
 
 }IonPumpControlData;
 
+
+typedef struct{
+    double dState;
+    double iState;
+    double iMax, iMin;
+
+    double iGain;
+    double pGain;
+    double dGain;
+
+}SPid;
+
+
+double UpdatePID(SPid* pid, double error, double reading);
 extern IonPumpControlData global_data_A36417_000;
 // ------------------------ CONFIGURE ADC MODULE ------------------- //
 
@@ -179,11 +194,11 @@ RF3  (DAC LDAC)
 
 
 #define SELF_TEST_FAIL_COUNT                    4
-#define ION_PUMP_CURRENT_SCALE_FACTOR           1 //1V per 1uA
-#define ION_PUMP_CURRENT_OVER_TRIP_POINT        555 //placeholder
+#define ION_PUMP_CURRENT_SCALE_FACTOR           .0763 //1V per 1uA
+#define ION_PUMP_CURRENT_OVER_TRIP_POINT        3100 //placeholder
 
-#define ION_PUMP_VOLTAGE_SCALE_FACTOR           .501//1V per 1kV
-#define ION_PUMP_VOLTAGE_UNDER_TRIP_POINT       555 //PLACEHOLDER
+#define ION_PUMP_VOLTAGE_SCALE_FACTOR           .0764//1V per 1kV
+#define ION_PUMP_VOLTAGE_UNDER_TRIP_POINT       2900 //PLACEHOLDER
 
 #define TARGET_CURRENT_SCALE_FACTOR             1   //placeholder
 #define TARGET_CURRENT_OVER_TRIP_POINT          555 //placeholder
@@ -198,6 +213,7 @@ RF3  (DAC LDAC)
 #define ANALOG_OUT_SCALE_FACTOR             1
 #define ANALOG_OUT_INTERNAL_SCALE           1
 
+#define EMCO_SETPOINT                       3000
 
 #endif	/* A36417_H */
 

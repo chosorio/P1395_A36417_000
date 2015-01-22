@@ -17,7 +17,8 @@ void SelfTestA36417(void);
 MCP4822 U11_MCP4822;
 
 unsigned int control_state;
-
+unsigned int EMCO_control_setpoint;
+SPid emco_pid;
 IonPumpControlData global_data_A36417_000;
 
 #define STATE_STARTUP                0x10
@@ -57,18 +58,55 @@ void DoStateMachine(void){
 }
 
 void DoA36417_000(void){
-    unsigned int EMCO_control_setpoint=0;
+
+    
 
 if(_T5IF){
 
+            
     _T5IF=0;
 
     ETMAnalogScaleCalibrateADCReading(&global_data_A36417_000.analog_input_ion_pump_voltage);
+    ETMAnalogScaleCalibrateADCReading(&global_data_A36417_000.analog_input_ion_pump_current);
     ETMAnalogScaleCalibrateADCReading(&global_data_A36417_000.analog_input_target_current);
     ETMAnalogScaleCalibrateADCReading(&global_data_A36417_000.analog_input_5V_monitor);
     ETMAnalogScaleCalibrateADCReading(&global_data_A36417_000.analog_input_15V_monitor);
     ETMAnalogScaleCalibrateADCReading(&global_data_A36417_000.analog_input_minus_5V_monitor);
 
+    unsigned int ion_pump_voltage=global_data_A36417_000.analog_input_ion_pump_voltage.reading_scaled_and_calibrated;
+
+    EMCO_control_setpoint=(unsigned int)(UpdatePID(&emco_pid,(EMCO_SETPOINT-(double)ion_pump_voltage), (double) ion_pump_voltage));
+
+
+    local_debug_data.debug_8=EMCO_control_setpoint;
+    EMCO_control_setpoint=610;
+    //babysitter
+    if(EMCO_control_setpoint>700){
+        EMCO_control_setpoint=700;
+    }
+        local_debug_data.debug_7=EMCO_control_setpoint;
+    if (ETMAnalogCheckOverAbsolute(&global_data_A36417_000.analog_input_ion_pump_voltage)) {
+           _FAULT_ION_PUMP_OVER_VOLTAGE=1;
+           EMCO_control_setpoint=0;
+    }
+    else{
+        _FAULT_ION_PUMP_OVER_VOLTAGE=0;
+    }
+
+    if (ETMAnalogCheckUnderAbsolute(&global_data_A36417_000.analog_input_ion_pump_voltage)) {
+           _FAULT_ION_PUMP_UNDER_VOLTAGE=1;
+    }
+    else{
+        _FAULT_ION_PUMP_OVER_VOLTAGE=0;
+    }
+        WriteMCP4822(&U11_MCP4822, MCP4822_OUTPUT_A_4096, EMCO_control_setpoint);
+
+
+    
+
+    local_debug_data.debug_1=global_data_A36417_000.analog_input_5V_monitor.reading_scaled_and_calibrated;
+    local_debug_data.debug_2=global_data_A36417_000.analog_input_15V_monitor.reading_scaled_and_calibrated;
+    local_debug_data.debug_3=global_data_A36417_000.analog_input_minus_5V_monitor.reading_scaled_and_calibrated;
 // -------------------- CHECK FOR FAULTS ------------------- //
 
     if (global_reset_faults) {
@@ -78,25 +116,57 @@ if(_T5IF){
     }
 
      if (ETMAnalogCheckUnderAbsolute(&global_data_A36417_000.analog_input_ion_pump_voltage)) {
-            _FAULT_ION_PUMP_UNDER_VOLTAGE=1;
+         _FAULT_ION_PUMP_UNDER_VOLTAGE=1;
     }
+     else{
+
+         _FAULT_ION_PUMP_UNDER_VOLTAGE=0;
+     }
 
     if (ETMAnalogCheckOverAbsolute(&global_data_A36417_000.analog_input_ion_pump_current)) {
             _FAULT_ION_PUMP_OVER_CURRENT=1;
     }
 
-    if (ETMAnalogCheckOverAbsolute(&global_data_A36417_000.analog_input_ion_pump_voltage)) {
-           _FAULT_ION_PUMP_OVER_VOLTAGE=1;
+    else{
+           _FAULT_ION_PUMP_OVER_VOLTAGE=0;
     }
 
-    //update EMCO setpoint
 
     //Write to DAC
     WriteMCP4822(&U11_MCP4822, MCP4822_OUTPUT_A_4096, EMCO_control_setpoint);
+
 }
     return;
 }
 
+double UpdatePID(SPid* pid, double error, double reading){
+    double pTerm,dTerm, iTerm;
+    pTerm=pid->pGain*error;
+
+    pid->iState +=error;
+    if (pid->iState > pid->iMax){
+        pid->iState = pid->iMax;
+    }
+
+    else if (pid->iState< pid->iMin){
+        pid->iState = pid->iMin;
+    }
+
+  iTerm = pid->iGain * pid->iState;  // calculate the integral term
+  dTerm = pid->dGain * (reading - pid->dState);
+  pid->dState = reading;
+    local_debug_data.debug_9=error;
+    local_debug_data.debug_A=pTerm;
+    local_debug_data.debug_B=iTerm;
+    local_debug_data.debug_C=dTerm;
+    if(pTerm + iTerm - dTerm < 0)
+        return 1;
+    else
+        return pTerm + iTerm - dTerm;
+
+
+
+}
 void SelfTestA36417(void){
     int test_count=0;
     while(1){
@@ -178,7 +248,17 @@ void InitializeA36417(void){
   _ADIE = 1;
   _ADON = 1;
 
+  //initialize PID control loop variables
+  emco_pid.dGain=.04;
+  emco_pid.dState=0;
+  emco_pid.iState=0;
+  emco_pid.iGain=.05;
+  emco_pid.pGain=.05;
+  emco_pid.iMax=12000;
+  emco_pid.iMin=0;
 
+  EMCO_control_setpoint=0;
+  WriteMCP4822(&U11_MCP4822, MCP4822_OUTPUT_A_4096, EMCO_control_setpoint);
   //Initialize analog input/output scaling
 
     global_data_A36417_000.analog_input_ion_pump_current.fixed_scale                     = MACRO_DEC_TO_SCALE_FACTOR_16(ION_PUMP_CURRENT_SCALE_FACTOR);
@@ -254,21 +334,22 @@ void InitializeA36417(void){
 }
 
 
+
 void __attribute__((interrupt, no_auto_psv)) _ADCInterrupt(void) {
   _ADIF = 0;
 
   if (_BUFS) {
       // read ADCBUF 0-7
-      global_data_A36417_000.analog_input_ion_pump_current.adc_accumulator          += ADCBUF0;
-      global_data_A36417_000.analog_input_ion_pump_voltage.adc_accumulator          += ADCBUF1;
+      global_data_A36417_000.analog_input_ion_pump_voltage.adc_accumulator          += ADCBUF0;
+      global_data_A36417_000.analog_input_ion_pump_current.adc_accumulator          += ADCBUF1;
       global_data_A36417_000.analog_input_5V_monitor.adc_accumulator                +=ADCBUF2;
       global_data_A36417_000.analog_input_15V_monitor.adc_accumulator               +=ADCBUF3;
       global_data_A36417_000.analog_input_minus_5V_monitor.adc_accumulator          +=ADCBUF4;
       global_data_A36417_000.analog_input_target_current.adc_accumulator            +=ADCBUF5;
     } else {
       // read ADCBUF 8-15
-      global_data_A36417_000.analog_input_ion_pump_current.adc_accumulator          += ADCBUF8;
-      global_data_A36417_000.analog_input_ion_pump_voltage.adc_accumulator          += ADCBUF9;
+      global_data_A36417_000.analog_input_ion_pump_voltage.adc_accumulator          += ADCBUF8;
+      global_data_A36417_000.analog_input_ion_pump_current.adc_accumulator          += ADCBUF9;
       global_data_A36417_000.analog_input_5V_monitor.adc_accumulator                +=ADCBUFA;
       global_data_A36417_000.analog_input_15V_monitor.adc_accumulator               +=ADCBUFB;
       global_data_A36417_000.analog_input_minus_5V_monitor.adc_accumulator          +=ADCBUFC;
@@ -306,5 +387,8 @@ void __attribute__((interrupt, no_auto_psv)) _ADCInterrupt(void) {
       global_data_A36417_000.accumulator_counter = 0;
   }
 
+    local_debug_data.debug_4=global_data_A36417_000.analog_input_ion_pump_voltage.filtered_adc_reading;
+    local_debug_data.debug_5=global_data_A36417_000.analog_input_ion_pump_current.filtered_adc_reading;
+    local_debug_data.debug_6=global_data_A36417_000.analog_input_target_current.filtered_adc_reading;
 
 }
