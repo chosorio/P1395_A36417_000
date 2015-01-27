@@ -59,7 +59,7 @@ void DoStateMachine(void){
 
 void DoA36417_000(void){
 
-    
+
 
 if(_T5IF){
 
@@ -79,15 +79,16 @@ if(_T5IF){
 
 
     local_debug_data.debug_8=EMCO_control_setpoint;
-    EMCO_control_setpoint=610;
+
     //babysitter
-    if(EMCO_control_setpoint>700){
-        EMCO_control_setpoint=700;
+    if(EMCO_control_setpoint>3000){
+        EMCO_control_setpoint=3000;
     }
         local_debug_data.debug_7=EMCO_control_setpoint;
     if (ETMAnalogCheckOverAbsolute(&global_data_A36417_000.analog_input_ion_pump_voltage)) {
+        //Maybe go to a fault state?
            _FAULT_ION_PUMP_OVER_VOLTAGE=1;
-           EMCO_control_setpoint=0;
+           //EMCO_control_setpoint=0;
     }
     else{
         _FAULT_ION_PUMP_OVER_VOLTAGE=0;
@@ -102,11 +103,10 @@ if(_T5IF){
         WriteMCP4822(&U11_MCP4822, MCP4822_OUTPUT_A_4096, EMCO_control_setpoint);
 
 
-    
-
     local_debug_data.debug_1=global_data_A36417_000.analog_input_5V_monitor.reading_scaled_and_calibrated;
     local_debug_data.debug_2=global_data_A36417_000.analog_input_15V_monitor.reading_scaled_and_calibrated;
     local_debug_data.debug_3=global_data_A36417_000.analog_input_minus_5V_monitor.reading_scaled_and_calibrated;
+
 // -------------------- CHECK FOR FAULTS ------------------- //
 
     if (global_reset_faults) {
@@ -164,9 +164,8 @@ double UpdatePID(SPid* pid, double error, double reading){
     else
         return pTerm + iTerm - dTerm;
 
-
-
 }
+
 void SelfTestA36417(void){
     int test_count=0;
     while(1){
@@ -201,6 +200,21 @@ void SelfTestA36417(void){
 
 void InitializeA36417(void){
 
+  // Configure Sample Target Current Interrupt
+  _INT3IP = 7; // This must be the highest priority interrupt
+  _INT1EP = 0; // Positive Transition COSORIO check this
+
+  // Configure ADC Interrupt
+  _ADIP   = 6; // This needs to be higher priority than the CAN interrupt (Which defaults to 4)
+
+  // Initialize all I/O Registers
+  TRISA = A36417_TRISA_VALUE;
+  TRISB = A36417_TRISB_VALUE;
+  TRISC = A36417_TRISC_VALUE;
+  TRISD = A36417_TRISD_VALUE;
+  TRISF = A36417_TRISF_VALUE;
+  TRISG = A36417_TRISG_VALUE;
+
     U11_MCP4822.pin_chip_select_not = _PIN_RF2;
     U11_MCP4822.pin_load_dac_not = _PIN_RF3;
     U11_MCP4822.spi_port = ETM_SPI_PORT_1;
@@ -211,24 +225,7 @@ void InitializeA36417(void){
     U11_MCP4822.fcy_clk = FCY_CLK;
 
     SetupMCP4822(&U11_MCP4822);
-
-
-  // Configure Inhibit Interrupt
-  _INT3IP = 7; // This must be the highest priority interrupt
-  _INT1EP = 0; // Positive Transition
-
-  // Configure ADC Interrupt
-  _ADIP   = 6; // This needs to be higher priority than the CAN interrupt (Which defaults to 4)
-
-
-  // Initialize all I/O Registers
-  TRISA = A36417_TRISA_VALUE;
-  TRISB = A36417_TRISB_VALUE;
-  TRISC = A36417_TRISC_VALUE;
-  TRISD = A36417_TRISD_VALUE;
-  TRISF = A36417_TRISF_VALUE;
-  TRISG = A36417_TRISG_VALUE;
-
+    
    // Initialize TMR5
   T5CON = T5CON_VALUE;
   TMR5  = 0;
@@ -249,13 +246,13 @@ void InitializeA36417(void){
   _ADON = 1;
 
   //initialize PID control loop variables
-  emco_pid.dGain=.04;
+  emco_pid.dGain=PID_DGAIN;
   emco_pid.dState=0;
   emco_pid.iState=0;
-  emco_pid.iGain=.05;
-  emco_pid.pGain=.05;
-  emco_pid.iMax=12000;
-  emco_pid.iMin=0;
+  emco_pid.iGain=PID_IGAIN;
+  emco_pid.pGain=PID_PGAIN;
+  emco_pid.iMax=PID_IMAX;
+  emco_pid.iMin=PID_IMIN;
 
   EMCO_control_setpoint=0;
   WriteMCP4822(&U11_MCP4822, MCP4822_OUTPUT_A_4096, EMCO_control_setpoint);
@@ -276,6 +273,7 @@ void InitializeA36417(void){
     global_data_A36417_000.analog_input_ion_pump_voltage.calibration_external_scale      = MACRO_DEC_TO_CAL_FACTOR_2(1);
     global_data_A36417_000.analog_input_ion_pump_voltage.calibration_external_offset     = 0;
     global_data_A36417_000.analog_input_ion_pump_voltage.under_trip_point_absolute       = ION_PUMP_VOLTAGE_UNDER_TRIP_POINT;
+    global_data_A36417_000.analog_input_ion_pump_voltage.over_trip_point_absolute       = ION_PUMP_VOLTAGE_OVER_TRIP_POINT;
 
     global_data_A36417_000.analog_input_target_current.fixed_scale                     = MACRO_DEC_TO_SCALE_FACTOR_16(TARGET_CURRENT_SCALE_FACTOR);
     global_data_A36417_000.analog_input_target_current.fixed_offset                    = 0;
@@ -333,7 +331,13 @@ void InitializeA36417(void){
 
 }
 
+void __attribute__((interrupt, no_auto_psv)) _INT3Interrupt(void){
 
+    //ETMAnalogScaleCalibrateADCReading(&global_data_A36417_000.analog_input_target_current);
+    //Want to pass the message. preferably without actually calling other functions.(latency)
+    //In order to to this, set some flags. Save the current reading from the ADC, and set flags to convert it.
+
+}
 
 void __attribute__((interrupt, no_auto_psv)) _ADCInterrupt(void) {
   _ADIF = 0;
@@ -345,7 +349,7 @@ void __attribute__((interrupt, no_auto_psv)) _ADCInterrupt(void) {
       global_data_A36417_000.analog_input_5V_monitor.adc_accumulator                +=ADCBUF2;
       global_data_A36417_000.analog_input_15V_monitor.adc_accumulator               +=ADCBUF3;
       global_data_A36417_000.analog_input_minus_5V_monitor.adc_accumulator          +=ADCBUF4;
-      global_data_A36417_000.analog_input_target_current.adc_accumulator            +=ADCBUF5;
+      global_data_A36417_000.analog_input_target_current.adc_accumulator            =ADCBUF5;
     } else {
       // read ADCBUF 8-15
       global_data_A36417_000.analog_input_ion_pump_voltage.adc_accumulator          += ADCBUF8;
@@ -353,34 +357,30 @@ void __attribute__((interrupt, no_auto_psv)) _ADCInterrupt(void) {
       global_data_A36417_000.analog_input_5V_monitor.adc_accumulator                +=ADCBUFA;
       global_data_A36417_000.analog_input_15V_monitor.adc_accumulator               +=ADCBUFB;
       global_data_A36417_000.analog_input_minus_5V_monitor.adc_accumulator          +=ADCBUFC;
-      global_data_A36417_000.analog_input_target_current.adc_accumulator            +=ADCBUFD;
+      global_data_A36417_000.analog_input_target_current.adc_accumulator            =ADCBUFD;
     }
 
   global_data_A36417_000.accumulator_counter += 1;
 
-  if (global_data_A36417_000.accumulator_counter >= 128) {
+  if (global_data_A36417_000.accumulator_counter >= 64) {
 
-      global_data_A36417_000.analog_input_ion_pump_current.adc_accumulator >>= 3;  // This is now a 16 bit number average of previous 128 samples
+      global_data_A36417_000.analog_input_ion_pump_current.adc_accumulator >>= 2;  // This is now a 16 bit number average of previous 128 samples
       global_data_A36417_000.analog_input_ion_pump_current.filtered_adc_reading = global_data_A36417_000.analog_input_ion_pump_current.adc_accumulator;
       global_data_A36417_000.analog_input_ion_pump_current.adc_accumulator = 0;
 
-      global_data_A36417_000.analog_input_ion_pump_voltage.adc_accumulator >>= 3;  // This is now a 16 bit number average of previous 128 samples
+      global_data_A36417_000.analog_input_ion_pump_voltage.adc_accumulator >>= 2;  // This is now a 16 bit number average of previous 128 samples
       global_data_A36417_000.analog_input_ion_pump_voltage.filtered_adc_reading = global_data_A36417_000.analog_input_ion_pump_voltage.adc_accumulator;
       global_data_A36417_000.analog_input_ion_pump_voltage.adc_accumulator = 0;
 
-      global_data_A36417_000.analog_input_target_current.adc_accumulator >>= 3;  // This is now a 16 bit number average of previous 128 samples
-      global_data_A36417_000.analog_input_target_current.filtered_adc_reading = global_data_A36417_000.analog_input_target_current.adc_accumulator;
-      global_data_A36417_000.analog_input_target_current.adc_accumulator = 0;
-
-      global_data_A36417_000.analog_input_5V_monitor.adc_accumulator >>= 3;  // This is now a 16 bit number average of previous 128 samples
+      global_data_A36417_000.analog_input_5V_monitor.adc_accumulator >>= 2;  // This is now a 16 bit number average of previous 128 samples
       global_data_A36417_000.analog_input_5V_monitor.filtered_adc_reading = global_data_A36417_000.analog_input_5V_monitor.adc_accumulator;
       global_data_A36417_000.analog_input_5V_monitor.adc_accumulator = 0;
 
-      global_data_A36417_000.analog_input_15V_monitor.adc_accumulator >>= 3;  // This is now a 16 bit number average of previous 128 samples
+      global_data_A36417_000.analog_input_15V_monitor.adc_accumulator >>= 2;  // This is now a 16 bit number average of previous 128 samples
       global_data_A36417_000.analog_input_15V_monitor.filtered_adc_reading = global_data_A36417_000.analog_input_15V_monitor.adc_accumulator;
       global_data_A36417_000.analog_input_15V_monitor.adc_accumulator = 0;
 
-      global_data_A36417_000.analog_input_minus_5V_monitor.adc_accumulator >>= 3;  // This is now a 16 bit number average of previous 128 samples
+      global_data_A36417_000.analog_input_minus_5V_monitor.adc_accumulator >>= 2;  // This is now a 16 bit number average of previous 128 samples
       global_data_A36417_000.analog_input_minus_5V_monitor.filtered_adc_reading = global_data_A36417_000.analog_input_minus_5V_monitor.adc_accumulator;
       global_data_A36417_000.analog_input_minus_5V_monitor.adc_accumulator = 0;
 

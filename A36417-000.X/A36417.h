@@ -195,25 +195,32 @@ RF3  (DAC LDAC)
 
 #define SELF_TEST_FAIL_COUNT                    4
 #define ION_PUMP_CURRENT_SCALE_FACTOR           .0763 //1V per 1uA
-#define ION_PUMP_CURRENT_OVER_TRIP_POINT        3100 //placeholder
+#define ION_PUMP_CURRENT_OVER_TRIP_POINT        6000 //
 
 #define ION_PUMP_VOLTAGE_SCALE_FACTOR           .0764//1V per 1kV
-#define ION_PUMP_VOLTAGE_UNDER_TRIP_POINT       2900 //PLACEHOLDER
+#define ION_PUMP_VOLTAGE_UNDER_TRIP_POINT       2900 //2.9kV
+#define ION_PUMP_VOLTAGE_OVER_TRIP_POINT        3300 // 3.3kV
 
-#define TARGET_CURRENT_SCALE_FACTOR             1   //placeholder
+#define TARGET_CURRENT_SCALE_FACTOR             0.0763   //placeholder
 #define TARGET_CURRENT_OVER_TRIP_POINT          555 //placeholder
 
-#define _5V_MONITOR_SCALE_FACTOR                0.0763 //placeholder
+#define _5V_MONITOR_SCALE_FACTOR                0.0763 //
 
-#define _15V_MONITOR_SCALE_FACTOR               0.0763 //placeholder
+#define _15V_MONITOR_SCALE_FACTOR               0.0763 //
 
-#define MINUS_5V_MONITOR_SCALE_FACTOR           0.0763 //placeholder
+#define MINUS_5V_MONITOR_SCALE_FACTOR           0.0763 //
 
 
 #define ANALOG_OUT_SCALE_FACTOR             1
 #define ANALOG_OUT_INTERNAL_SCALE           1
 
 #define EMCO_SETPOINT                       3000
+
+#define PID_DGAIN                           .06
+#define PID_IGAIN                           .05
+#define PID_PGAIN                           .05
+#define PID_IMAX                            50000
+#define PID_IMIN                            0
 
 #endif	/* A36417_H */
 
