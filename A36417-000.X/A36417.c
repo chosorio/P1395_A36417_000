@@ -41,12 +41,12 @@ void DoStateMachine(void){
             break;
 
        case STATE_SELF_TEST:
+           ETMCanDoCan();
            SelfTestA36417();
-           control_state=STATE_OPERATE;
            break;
 
         case STATE_OPERATE:
-            _BOARD_SELF_CHECK_FAILED=0;
+
             DoA36417_000();
             ETMCanDoCan();
             break;
@@ -81,8 +81,8 @@ if(_T5IF){
     local_debug_data.debug_8=EMCO_control_setpoint;
 
     //babysitter
-    if(EMCO_control_setpoint>3000){
-        EMCO_control_setpoint=3000;
+    if(EMCO_control_setpoint>1200){
+        EMCO_control_setpoint=1200;
     }
         local_debug_data.debug_7=EMCO_control_setpoint;
     if (ETMAnalogCheckOverAbsolute(&global_data_A36417_000.analog_input_ion_pump_voltage)) {
@@ -168,7 +168,8 @@ double UpdatePID(SPid* pid, double error, double reading){
 
 void SelfTestA36417(void){
     int test_count=0;
-    while(1){
+
+
         if(_T5IF){
             _T5IF=0;
 
@@ -181,9 +182,12 @@ void SelfTestA36417(void){
             unsigned int _15Vmonitor=global_data_A36417_000.analog_input_15V_monitor.reading_scaled_and_calibrated;
             unsigned int minus_5Vmonitor=global_data_A36417_000.analog_input_minus_5V_monitor.reading_scaled_and_calibrated;
 
+
+
             if(_5Vmonitor>2400&&_5Vmonitor<2600){
                 if(_15Vmonitor>2400&&_15Vmonitor<2600){
                     if(minus_5Vmonitor>1570&&minus_5Vmonitor<1770){
+                        control_state=STATE_OPERATE;
                         return;
                     }
                 }
@@ -195,7 +199,7 @@ void SelfTestA36417(void){
             }
             
         }
-    }
+    
 }
 
 void InitializeA36417(void){
@@ -225,7 +229,9 @@ void InitializeA36417(void){
     U11_MCP4822.fcy_clk = FCY_CLK;
 
     SetupMCP4822(&U11_MCP4822);
-    
+
+  _BOARD_SELF_CHECK_FAILED=0;
+
    // Initialize TMR5
   T5CON = T5CON_VALUE;
   TMR5  = 0;
@@ -328,6 +334,7 @@ void InitializeA36417(void){
   __delay32(1000000);
   ClrWdt();
   PIN_LED_TEST_POINT_B = 1;
+
 
 }
 

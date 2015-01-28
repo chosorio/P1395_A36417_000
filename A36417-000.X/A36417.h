@@ -194,7 +194,7 @@ RF3  (DAC LDAC)
 
 
 #define SELF_TEST_FAIL_COUNT                    4
-#define ION_PUMP_CURRENT_SCALE_FACTOR           .0763 //1V per 1uA
+#define ION_PUMP_CURRENT_SCALE_FACTOR           2*.0763 //1V per 2uA
 #define ION_PUMP_CURRENT_OVER_TRIP_POINT        6000 //
 
 #define ION_PUMP_VOLTAGE_SCALE_FACTOR           .0764//1V per 1kV
