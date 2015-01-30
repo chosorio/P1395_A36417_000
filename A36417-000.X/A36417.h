@@ -31,6 +31,9 @@ typedef struct{
 
     unsigned int accumulator_counter;
 
+    unsigned int target_current_high;
+    unsigned int target_current_low;
+    
 }IonPumpControlData;
 
 

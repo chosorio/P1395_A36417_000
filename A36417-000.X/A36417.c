@@ -18,6 +18,9 @@ MCP4822 U11_MCP4822;
 
 unsigned int control_state;
 unsigned int EMCO_control_setpoint;
+unsigned int target_current_flag;
+unsigned int target_current;
+
 SPid emco_pid;
 IonPumpControlData global_data_A36417_000;
 
@@ -58,7 +61,17 @@ void DoStateMachine(void){
 }
 
 void DoA36417_000(void){
+    //If a target pulse was received
+    if(target_current_flag){
+        target_current_flag=0;
+        ETMAnalogScaleCalibrateADCReading(&global_data_A36417_000.analog_input_target_current);
+        //need to send message up...don't know how.
+        //basically, if high
+        global_data_A36417_000.target_current_high=global_data_A36417_000.analog_input_target_current.reading_scaled_and_calibrated;
+        //if low
+        global_data_A36417_000.target_current_high=global_data_A36417_000.analog_input_target_current.reading_scaled_and_calibrated;
 
+    }
 
 
 if(_T5IF){
@@ -218,7 +231,10 @@ void InitializeA36417(void){
   TRISD = A36417_TRISD_VALUE;
   TRISF = A36417_TRISF_VALUE;
   TRISG = A36417_TRISG_VALUE;
-
+  
+  target_current=0;
+  target_current_flag=0;
+  
     U11_MCP4822.pin_chip_select_not = _PIN_RF2;
     U11_MCP4822.pin_load_dac_not = _PIN_RF3;
     U11_MCP4822.spi_port = ETM_SPI_PORT_1;
@@ -343,7 +359,8 @@ void __attribute__((interrupt, no_auto_psv)) _INT3Interrupt(void){
     //ETMAnalogScaleCalibrateADCReading(&global_data_A36417_000.analog_input_target_current);
     //Want to pass the message. preferably without actually calling other functions.(latency)
     //In order to to this, set some flags. Save the current reading from the ADC, and set flags to convert it.
-
+    target_current_flag=1;
+    global_data_A36417_000.analog_input_target_current.adc_accumulator=target_current;
 }
 
 void __attribute__((interrupt, no_auto_psv)) _ADCInterrupt(void) {
@@ -356,7 +373,8 @@ void __attribute__((interrupt, no_auto_psv)) _ADCInterrupt(void) {
       global_data_A36417_000.analog_input_5V_monitor.adc_accumulator                +=ADCBUF2;
       global_data_A36417_000.analog_input_15V_monitor.adc_accumulator               +=ADCBUF3;
       global_data_A36417_000.analog_input_minus_5V_monitor.adc_accumulator          +=ADCBUF4;
-      global_data_A36417_000.analog_input_target_current.adc_accumulator            =ADCBUF5;
+      target_current             =ADCBUF5;
+      
     } else {
       // read ADCBUF 8-15
       global_data_A36417_000.analog_input_ion_pump_voltage.adc_accumulator          += ADCBUF8;
@@ -364,7 +382,7 @@ void __attribute__((interrupt, no_auto_psv)) _ADCInterrupt(void) {
       global_data_A36417_000.analog_input_5V_monitor.adc_accumulator                +=ADCBUFA;
       global_data_A36417_000.analog_input_15V_monitor.adc_accumulator               +=ADCBUFB;
       global_data_A36417_000.analog_input_minus_5V_monitor.adc_accumulator          +=ADCBUFC;
-      global_data_A36417_000.analog_input_target_current.adc_accumulator            =ADCBUFD;
+      target_current            =ADCBUFD;
     }
 
   global_data_A36417_000.accumulator_counter += 1;
