@@ -1,5 +1,7 @@
 #include "A36417.h"
 #include "MCP4822.h"
+#include "ETM_EEPROM.h"
+#include "FIRMWARE_VERSION.h"
 
 _FOSC(ECIO & CSW_FSCM_OFF);
 _FWDT(WDT_ON & WDTPSA_512 & WDTPSB_8);  // 8 Second watchdog timer
@@ -18,8 +20,10 @@ MCP4822 U11_MCP4822;
 
 unsigned int control_state;
 unsigned int EMCO_control_setpoint;
-unsigned int target_current_flag;
-unsigned int target_current;
+volatile unsigned int target_current_flag;
+volatile unsigned int target_current;
+
+unsigned int ADCDEBUG5, ADCDEBUG6, ADCDEBUG7;
 
 SPid emco_pid;
 IonPumpControlData global_data_A36417_000;
@@ -44,14 +48,14 @@ void DoStateMachine(void){
             break;
 
        case STATE_SELF_TEST:
-           ETMCanDoCan();
+           ETMCanSlaveDoCan();
            SelfTestA36417();
            break;
 
         case STATE_OPERATE:
 
             DoA36417_000();
-            ETMCanDoCan();
+            ETMCanSlaveDoCan();
             break;
 
         default:
@@ -62,8 +66,7 @@ void DoStateMachine(void){
 
 void DoA36417_000(void){
     //If a target pulse was received
-    if(target_current_flag){
-        target_current_flag=0;
+
         ETMAnalogScaleCalibrateADCReading(&global_data_A36417_000.analog_input_target_current);
         //need to send message up...don't know how.
         //basically, if high
@@ -71,7 +74,6 @@ void DoA36417_000(void){
         //if low
         global_data_A36417_000.target_current_high=global_data_A36417_000.analog_input_target_current.reading_scaled_and_calibrated;
 
-    }
 
 
 if(_T5IF){
@@ -122,10 +124,9 @@ if(_T5IF){
 
 // -------------------- CHECK FOR FAULTS ------------------- //
 
-    if (global_reset_faults) {
+    if (_SYNC_CONTROL_RESET_ENABLE) {
       local_debug_data.debug_0++;
       _FAULT_REGISTER = 0x0000;
-      global_reset_faults = 0;
     }
 
      if (ETMAnalogCheckUnderAbsolute(&global_data_A36417_000.analog_input_ion_pump_voltage)) {
@@ -219,7 +220,10 @@ void InitializeA36417(void){
 
   // Configure Sample Target Current Interrupt
   _INT3IP = 7; // This must be the highest priority interrupt
-  _INT1EP = 0; // Positive Transition COSORIO check this
+  _INT3EP = 0; // Positive Transition COSORIO check this
+  _INT3IF=0; //Clear the interrupt flag.
+  _INT3IE=1;    
+
 
   // Configure ADC Interrupt
   _ADIP   = 6; // This needs to be higher priority than the CAN interrupt (Which defaults to 4)
@@ -336,7 +340,7 @@ void InitializeA36417(void){
     global_data_A36417_000.analog_output_emco_control.enabled                         = 1;
 
    // Initialize the CAN module
-  ETMCanInitialize();
+  ETMCanSlaveInitialize();
 
   // Flash LEDs at boot up
   __delay32(1000000);
@@ -359,8 +363,26 @@ void __attribute__((interrupt, no_auto_psv)) _INT3Interrupt(void){
     //ETMAnalogScaleCalibrateADCReading(&global_data_A36417_000.analog_input_target_current);
     //Want to pass the message. preferably without actually calling other functions.(latency)
     //In order to to this, set some flags. Save the current reading from the ADC, and set flags to convert it.
+
     target_current_flag=1;
-    global_data_A36417_000.analog_input_target_current.adc_accumulator=target_current;
+
+    //Clear ADON bit?
+
+    ADCHS = 0X000A; //Scan Channel 10
+    ADCSSL =0;  //No Scan
+    //Might need to set ADCON3- I dont think i have to. The sampling time doesnt need to change.
+    ADCON2=0; //Change this- you don't want an interrupt, just poll the done bit.
+    //Turn on the ADC
+    ADCON1.F15=1;
+
+    ADCON1.F1=1;     //Start Sampling
+    //wait about .5us?
+
+    //
+
+    //global_data_A36417_000.analog_input_target_current.filtered_adc_reading=target_current;
+    _INT3IF=0;
+    ADCDEBUG5=0;
 }
 
 void __attribute__((interrupt, no_auto_psv)) _ADCInterrupt(void) {
@@ -373,7 +395,16 @@ void __attribute__((interrupt, no_auto_psv)) _ADCInterrupt(void) {
       global_data_A36417_000.analog_input_5V_monitor.adc_accumulator                +=ADCBUF2;
       global_data_A36417_000.analog_input_15V_monitor.adc_accumulator               +=ADCBUF3;
       global_data_A36417_000.analog_input_minus_5V_monitor.adc_accumulator          +=ADCBUF4;
-      target_current             =ADCBUF5;
+
+      if(target_current_flag){
+      global_data_A36417_000.analog_input_target_current.filtered_adc_reading       =ADCBUF5;
+      }
+      
+      global_data_A36417_000.analog_input_target_current.adc_accumulator                +=ADCBUF5;
+      if(ADCDEBUG5<ADCBUF5){
+      ADCDEBUG5=ADCBUF5;
+      }
+
       
     } else {
       // read ADCBUF 8-15
@@ -382,7 +413,13 @@ void __attribute__((interrupt, no_auto_psv)) _ADCInterrupt(void) {
       global_data_A36417_000.analog_input_5V_monitor.adc_accumulator                +=ADCBUFA;
       global_data_A36417_000.analog_input_15V_monitor.adc_accumulator               +=ADCBUFB;
       global_data_A36417_000.analog_input_minus_5V_monitor.adc_accumulator          +=ADCBUFC;
-      target_current            =ADCBUFD;
+          if(target_current_flag){
+      global_data_A36417_000.analog_input_target_current.filtered_adc_reading       =ADCBUFD;
+      }
+      global_data_A36417_000.analog_input_target_current.adc_accumulator                +=ADCBUFD;
+      if(ADCDEBUG5<ADCBUF5){
+        ADCDEBUG5=ADCBUFD;
+      }
     }
 
   global_data_A36417_000.accumulator_counter += 1;
@@ -409,6 +446,8 @@ void __attribute__((interrupt, no_auto_psv)) _ADCInterrupt(void) {
       global_data_A36417_000.analog_input_minus_5V_monitor.filtered_adc_reading = global_data_A36417_000.analog_input_minus_5V_monitor.adc_accumulator;
       global_data_A36417_000.analog_input_minus_5V_monitor.adc_accumulator = 0;
 
+      global_data_A36417_000.analog_input_target_current.adc_accumulator >>=2;
+      global_data_A36417_000.analog_input_target_current.adc_accumulator =0;
       global_data_A36417_000.accumulator_counter = 0;
   }
 
