@@ -366,23 +366,24 @@ void __attribute__((interrupt, no_auto_psv)) _INT3Interrupt(void){
 
     target_current_flag=1;
 
+//  This is an attempt to sample the target current on the interrupt. For now, comment out. 
     //Clear ADON bit?
-
-    ADCHS = 0X000A; //Scan Channel 10
-    ADCSSL =0;  //No Scan
-    //Might need to set ADCON3- I dont think i have to. The sampling time doesnt need to change.
-    ADCON2=0; //Change this- you don't want an interrupt, just poll the done bit.
-    //Turn on the ADC
-    ADCON1.F15=1;
-
-    ADCON1.F1=1;     //Start Sampling
-    //wait about .5us?
-
-    //
-
-    //global_data_A36417_000.analog_input_target_current.filtered_adc_reading=target_current;
-    _INT3IF=0;
-    ADCDEBUG5=0;
+//
+//    ADCHS = 0X000A; //Scan Channel 10
+//    ADCSSL =0;  //No Scan
+//    //Might need to set ADCON3- I dont think i have to. The sampling time doesnt need to change.
+//    ADCON2=0; //Change this- you don't want an interrupt, just poll the done bit.
+//    //Turn on the ADC
+//    ADCON1.F15=1;
+//
+//    ADCON1.F1=1;     //Start Sampling
+//    //wait about .5us?
+//
+//    //
+//
+//    //global_data_A36417_000.analog_input_target_current.filtered_adc_reading=target_current;
+//    _INT3IF=0;
+//    ADCDEBUG5=0;
 }
 
 void __attribute__((interrupt, no_auto_psv)) _ADCInterrupt(void) {
