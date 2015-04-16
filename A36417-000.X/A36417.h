@@ -34,6 +34,10 @@ typedef struct{
 
     unsigned int target_current_high;
     unsigned int target_current_low;
+
+    unsigned int trigger_recieved;
+    unsigned int sample_level;
+    unsigned int pulse_id;
     
 }IonPumpControlData;
 

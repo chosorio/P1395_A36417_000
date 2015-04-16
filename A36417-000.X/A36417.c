@@ -65,6 +65,15 @@ void DoStateMachine(void){
 }
 
 void DoA36417_000(void){
+  if (global_data_A36417_000.trigger_recieved) {
+    if (global_data_A36417_000.sample_level) {
+      //ETMCanSlaveIonPumpSendTargetCurrentReading(0x2002, 0x0000, global_data_A36417_000.pulse_id);
+    } else {
+      //ETMCanSlaveIonPumpSendTargetCurrentReading(0x0000, 0x1001, global_data_A36417_000.pulse_id);
+    }
+    global_data_A36417_000.trigger_recieved = 0;
+  }
+  
     //If a target pulse was received
 
         ETMAnalogScaleCalibrateADCReading(&global_data_A36417_000.analog_input_target_current);
@@ -74,7 +83,7 @@ void DoA36417_000(void){
         //if low
         global_data_A36417_000.target_current_high=global_data_A36417_000.analog_input_target_current.reading_scaled_and_calibrated;
 
-
+	
 
 if(_T5IF){
 
@@ -239,6 +248,11 @@ void InitializeA36417(void){
   target_current=0;
   target_current_flag=0;
   
+
+  etm_can_my_configuration.firmware_major_rev = FIRMWARE_AGILE_REV;
+  etm_can_my_configuration.firmware_branch = FIRMWARE_BRANCH;
+  etm_can_my_configuration.firmware_minor_rev = FIRMWARE_MINOR_REV;
+
     U11_MCP4822.pin_chip_select_not = _PIN_RF2;
     U11_MCP4822.pin_load_dac_not = _PIN_RF3;
     U11_MCP4822.spi_port = ETM_SPI_PORT_1;
@@ -359,6 +373,10 @@ void InitializeA36417(void){
 }
 
 void __attribute__((interrupt, no_auto_psv)) _INT3Interrupt(void){
+  _INT3IF = 0;
+  global_data_A36417_000.trigger_recieved = 1;
+  global_data_A36417_000.pulse_id = etm_can_next_pulse_count;
+  global_data_A36417_000.sample_level = etm_can_next_pulse_level;
 
     //ETMAnalogScaleCalibrateADCReading(&global_data_A36417_000.analog_input_target_current);
     //Want to pass the message. preferably without actually calling other functions.(latency)
