@@ -154,6 +154,13 @@ if(_T5IF){
            _FAULT_ION_PUMP_OVER_VOLTAGE=0;
     }
 
+    if(_FAULT_REGISTER){
+        _CONTROL_NOT_READY=1;
+    }
+    else{
+        _CONTROL_NOT_READY=0;
+    }
+
 
     //Write to DAC
     WriteMCP4822(&U11_MCP4822, MCP4822_OUTPUT_A_4096, EMCO_control_setpoint);
@@ -266,7 +273,10 @@ void InitializeA36417(void){
 
   _BOARD_SELF_CHECK_FAILED=0;
 
-   // Initialize TMR5
+  //Make sure fault register is clear
+  _FAULT_REGISTER = 0x0000;
+
+  // Initialize TMR5
   T5CON = T5CON_VALUE;
   TMR5  = 0;
   _T5IF = 0;
