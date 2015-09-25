@@ -1,6 +1,10 @@
+
+#include <p30f6014a.h>
+#include <libpic30.h>
+#include <adc12.h>
+#include <xc.h>
+#include <timer.h>
 #include "A36417.h"
-#include "MCP4822.h"
-#include "ETM_EEPROM.h"
 #include "FIRMWARE_VERSION.h"
 
 _FOSC(ECIO & CSW_FSCM_OFF);
@@ -85,10 +89,10 @@ void DoA36417_000(void){
 
 	
 
-if(_T5IF){
+  if(_T3IF){
 
             
-    _T5IF=0;
+    _T3IF=0;
 
     ETMAnalogScaleCalibrateADCReading(&global_data_A36417_000.analog_input_ion_pump_voltage);
     ETMAnalogScaleCalibrateADCReading(&global_data_A36417_000.analog_input_ion_pump_current);
@@ -101,14 +105,15 @@ if(_T5IF){
 
     EMCO_control_setpoint=(unsigned int)(UpdatePID(&emco_pid,(EMCO_SETPOINT-(double)ion_pump_voltage), (double) ion_pump_voltage));
 
-
-    local_debug_data.debug_8=EMCO_control_setpoint;
+    ETMCanSlaveSetDebugRegister(8, EMCO_control_setpoint);
+    //local_debug_data.debug_8=EMCO_control_setpoint;
 
     //babysitter
     if(EMCO_control_setpoint>1200){
         EMCO_control_setpoint=1200;
     }
-        local_debug_data.debug_7=EMCO_control_setpoint;
+        ETMCanSlaveSetDebugRegister(7, EMCO_control_setpoint);
+        //local_debug_data.debug_7=EMCO_control_setpoint;
     if (ETMAnalogCheckOverAbsolute(&global_data_A36417_000.analog_input_ion_pump_voltage)) {
         //Maybe go to a fault state?
            _FAULT_ION_PUMP_OVER_VOLTAGE=1;
@@ -127,14 +132,16 @@ if(_T5IF){
         WriteMCP4822(&U11_MCP4822, MCP4822_OUTPUT_A_4096, EMCO_control_setpoint);
 
 
-    local_debug_data.debug_1=global_data_A36417_000.analog_input_5V_monitor.reading_scaled_and_calibrated;
-    local_debug_data.debug_2=global_data_A36417_000.analog_input_15V_monitor.reading_scaled_and_calibrated;
-    local_debug_data.debug_3=global_data_A36417_000.analog_input_minus_5V_monitor.reading_scaled_and_calibrated;
+    ETMCanSlaveSetDebugRegister(1, global_data_A36417_000.analog_input_5V_monitor.reading_scaled_and_calibrated);
+    ETMCanSlaveSetDebugRegister(2, global_data_A36417_000.analog_input_15V_monitor.reading_scaled_and_calibrated);
+    ETMCanSlaveSetDebugRegister(3, global_data_A36417_000.analog_input_minus_5V_monitor.reading_scaled_and_calibrated);
+    //local_debug_data.debug_1=global_data_A36417_000.analog_input_5V_monitor.reading_scaled_and_calibrated;
+    //local_debug_data.debug_2=global_data_A36417_000.analog_input_15V_monitor.reading_scaled_and_calibrated;
+    //local_debug_data.debug_3=global_data_A36417_000.analog_input_minus_5V_monitor.reading_scaled_and_calibrated;
 
 // -------------------- CHECK FOR FAULTS ------------------- //
 
-    if (_SYNC_CONTROL_RESET_ENABLE) {
-      local_debug_data.debug_0++;
+    if (ETMCanSlaveGetSyncMsgResetEnable()) {
       _FAULT_REGISTER = 0x0000;
     }
 
@@ -165,12 +172,12 @@ if(_T5IF){
     //Write to DAC
     WriteMCP4822(&U11_MCP4822, MCP4822_OUTPUT_A_4096, EMCO_control_setpoint);
 
-}
-    return;
+  }
+  return;
 }
 
 double UpdatePID(SPid* pid, double error, double reading){
-    double pTerm,dTerm, iTerm;
+    double pTerm, dTerm, iTerm;
     pTerm=pid->pGain*error;
 
     pid->iState +=error;
@@ -185,10 +192,14 @@ double UpdatePID(SPid* pid, double error, double reading){
   iTerm = pid->iGain * pid->iState;  // calculate the integral term
   dTerm = pid->dGain * (reading - pid->dState);
   pid->dState = reading;
-    local_debug_data.debug_9=error;
-    local_debug_data.debug_A=pTerm;
-    local_debug_data.debug_B=iTerm;
-    local_debug_data.debug_C=dTerm;
+    ETMCanSlaveSetDebugRegister(9, (unsigned int)error);
+    ETMCanSlaveSetDebugRegister(0xA, (unsigned int)pTerm);
+    ETMCanSlaveSetDebugRegister(0xB, (unsigned int)iTerm);
+    ETMCanSlaveSetDebugRegister(0xC, (unsigned int)dTerm);
+    //local_debug_data.debug_9=error;
+    //local_debug_data.debug_A=pTerm;
+    //local_debug_data.debug_B=iTerm;
+    //local_debug_data.debug_C=dTerm;
     if(pTerm + iTerm - dTerm < 0)
         return 1;
     else
@@ -200,8 +211,8 @@ void SelfTestA36417(void){
     int test_count=0;
 
 
-        if(_T5IF){
-            _T5IF=0;
+        if(_T3IF){
+            _T3IF=0;
 
             //Check 5V, -5V, 15V monitors
             ETMAnalogScaleCalibrateADCReading(&global_data_A36417_000.analog_input_5V_monitor);
@@ -225,7 +236,7 @@ void SelfTestA36417(void){
             
             if(test_count>SELF_TEST_FAIL_COUNT){
                 //Set Board self check fail bit.
-                _BOARD_SELF_CHECK_FAILED=1;
+                _CONTROL_SELF_CHECK_ERROR=1;
             }
             
         }
@@ -233,6 +244,16 @@ void SelfTestA36417(void){
 }
 
 void InitializeA36417(void){
+
+  // Initialize the status register and load the inhibit and fault masks
+  _FAULT_REGISTER = 0;
+  _CONTROL_REGISTER = 0;
+  _WARNING_REGISTER = 0;
+  _NOT_LOGGED_REGISTER = 0;
+
+#define SERIAL_NUMBER   100
+#define AGILE_REV       10
+
 
   // Configure Sample Target Current Interrupt
   _INT3IP = 7; // This must be the highest priority interrupt
@@ -256,10 +277,6 @@ void InitializeA36417(void){
   target_current_flag=0;
   
 
-  etm_can_my_configuration.firmware_major_rev = FIRMWARE_AGILE_REV;
-  etm_can_my_configuration.firmware_branch = FIRMWARE_BRANCH;
-  etm_can_my_configuration.firmware_minor_rev = FIRMWARE_MINOR_REV;
-
     U11_MCP4822.pin_chip_select_not = _PIN_RF2;
     U11_MCP4822.pin_load_dac_not = _PIN_RF3;
     U11_MCP4822.spi_port = ETM_SPI_PORT_1;
@@ -271,16 +288,14 @@ void InitializeA36417(void){
 
     SetupMCP4822(&U11_MCP4822);
 
-  _BOARD_SELF_CHECK_FAILED=0;
+  _CONTROL_SELF_CHECK_ERROR=0;
 
-  //Make sure fault register is clear
-  _FAULT_REGISTER = 0x0000;
-
-  // Initialize TMR5
-  T5CON = T5CON_VALUE;
-  TMR5  = 0;
-  _T5IF = 0;
-  PR5   = PR5_VALUE_10_MILLISECONDS;
+ 
+  // Initialize TMR3
+  T3CON = T3CON_VALUE;
+  TMR3  = 0;
+  _T3IF = 0;
+  PR3   = PR3_VALUE_10_MILLISECONDS;
 
   // Initialize integral ADC
   // ---- Configure the dsPIC ADC Module ------------ //
@@ -364,7 +379,9 @@ void InitializeA36417(void){
     global_data_A36417_000.analog_output_emco_control.enabled                         = 1;
 
    // Initialize the CAN module
-  ETMCanSlaveInitialize();
+  //ETMCanSlaveInitialize();
+  ETMCanSlaveInitialize(CAN_PORT_1, FCY_CLK, ETM_CAN_ADDR_ION_PUMP_BOARD, PIN_LED_TEST_POINT_B, 4);
+  ETMCanSlaveLoadConfiguration(36417, 000, AGILE_REV, FIRMWARE_AGILE_REV, FIRMWARE_BRANCH, FIRMWARE_MINOR_REV, SERIAL_NUMBER);
 
   // Flash LEDs at boot up
   __delay32(1000000);
@@ -385,8 +402,8 @@ void InitializeA36417(void){
 void __attribute__((interrupt, no_auto_psv)) _INT3Interrupt(void){
   _INT3IF = 0;
   global_data_A36417_000.trigger_recieved = 1;
-  global_data_A36417_000.pulse_id = etm_can_next_pulse_count;
-  global_data_A36417_000.sample_level = etm_can_next_pulse_level;
+  global_data_A36417_000.pulse_id = ETMCanSlaveGetPulseCount();
+  global_data_A36417_000.sample_level = ETMCanSlaveGetPulseLevel();
 
     //ETMAnalogScaleCalibrateADCReading(&global_data_A36417_000.analog_input_target_current);
     //Want to pass the message. preferably without actually calling other functions.(latency)
@@ -480,8 +497,30 @@ void __attribute__((interrupt, no_auto_psv)) _ADCInterrupt(void) {
       global_data_A36417_000.accumulator_counter = 0;
   }
 
-    local_debug_data.debug_4=global_data_A36417_000.analog_input_ion_pump_voltage.filtered_adc_reading;
-    local_debug_data.debug_5=global_data_A36417_000.analog_input_ion_pump_current.filtered_adc_reading;
-    local_debug_data.debug_6=global_data_A36417_000.analog_input_target_current.filtered_adc_reading;
+    ETMCanSlaveSetDebugRegister(4, global_data_A36417_000.analog_input_ion_pump_voltage.filtered_adc_reading);
+    ETMCanSlaveSetDebugRegister(5, global_data_A36417_000.analog_input_ion_pump_current.filtered_adc_reading);
+    ETMCanSlaveSetDebugRegister(6, global_data_A36417_000.analog_input_target_current.filtered_adc_reading);
+    //local_debug_data.debug_4=global_data_A36417_000.analog_input_ion_pump_voltage.filtered_adc_reading;
+    //local_debug_data.debug_5=global_data_A36417_000.analog_input_ion_pump_current.filtered_adc_reading;
+    //local_debug_data.debug_6=global_data_A36417_000.analog_input_target_current.filtered_adc_reading;
 
+}
+
+
+
+
+void ETMCanSlaveExecuteCMDBoardSpecific(ETMCanMessage* message_ptr) {
+  unsigned int index_word;
+ 
+  index_word = message_ptr->word3;
+  switch (index_word)
+    {
+      /*
+	Place all board specific commands here
+      */
+     
+    default:
+      //local_can_errors.invalid_index++;
+      break;
+    }
 }

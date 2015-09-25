@@ -9,15 +9,32 @@
 #define	__A36417_H
 
 
-#include <p30f6014a.h>
-#include <libpic30.h>
-#include <adc12.h>
-#include <timer.h>
+
 
 #include "P1395_CAN_SLAVE.h"
-#include "P1395_MODULE_CONFIG.h"
-#include "ETM_ANALOG.h"
+#include "ETM.h"
 
+#define FCY_CLK     10000000
+
+/*
+
+ * Ion Pump Board Assembly
+ *
+ * Hardware Module Resource Usage
+
+  CAN1   - Used/Configured by ETM CAN
+  Timer2(will change to 4) - Used/Configured by ETM CAN - Used to Time sending of messages (status update / logging data and such)
+  Timer3(will change to 5) - Used/Configured by ETM CAN - Used for detecting error on can bus
+
+  I2C    - Used/Configured by EEPROM Module
+
+  Timer4(will change to 2) - Used for looking at time between pulses
+  Timer5(will change to 3) - Used for 10msTicToc
+
+  ADC Module - See Below For Specifics
+
+  
+ */
 
 
 
@@ -96,15 +113,15 @@ extern IonPumpControlData global_data_A36417_000;
 
 
 /*
-   TMR5 Configuration
-   Timer5 - Used for 10msTicToc
+   TMR3 Configuration
+   Timer3 - Used for 10msTicToc
    Period should be set to 10mS
    With 10Mhz Clock, x8 multiplier will yield max period of 17.7mS, 2.71uS per tick
 */
 
-#define T5CON_VALUE                    (T5_ON & T5_IDLE_CON & T5_GATE_OFF & T5_PS_1_8 & T5_SOURCE_INT)
-#define PR5_PERIOD_US                  10000   // 10mS
-#define PR5_VALUE_10_MILLISECONDS      (FCY_CLK_MHZ*PR5_PERIOD_US/8)
+#define T3CON_VALUE                    (T3_ON & T3_IDLE_CON & T3_GATE_OFF & T3_PS_1_8 & T3_SOURCE_INT)
+#define PR3_PERIOD_US                  10000   // 10mS
+#define PR3_VALUE_10_MILLISECONDS      12500   //(FCY_CLK_MHZ*PR3_PERIOD_US/8)
 
 // -------------------- A36417_000 FAULTS/WARNINGS CONFIGURATION-------------------- //
 #define _FAULT_ION_PUMP_OVER_CURRENT             _FAULT_1
@@ -114,7 +131,7 @@ extern IonPumpControlData global_data_A36417_000;
 // -------------------- A36417_000 STATUS BIT CONFIGURATION ------------------------ //
 
 
-#define _BOARD_SELF_CHECK_FAILED    _STATUS_3
+//#define _BOARD_SELF_CHECK_FAILED    _WARNING_3
 
 
 /*
