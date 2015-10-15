@@ -91,7 +91,9 @@ void DoA36417_000(void){
 
   if(_T3IF){
 
-            
+    slave_board_data.log_data[2] = global_data_A36417_000.analog_input_ion_pump_current.reading_scaled_and_calibrated;
+    slave_board_data.log_data[3] = global_data_A36417_000.analog_input_ion_pump_voltage.reading_scaled_and_calibrated;
+
     _T3IF=0;
 
     ETMAnalogScaleCalibrateADCReading(&global_data_A36417_000.analog_input_ion_pump_voltage);
@@ -252,7 +254,7 @@ void InitializeA36417(void){
   _NOT_LOGGED_REGISTER = 0;
 
 #define SERIAL_NUMBER   100
-#define AGILE_REV       10
+#define AGILE_REV       'A'
 
 
   // Configure Sample Target Current Interrupt
@@ -380,7 +382,7 @@ void InitializeA36417(void){
 
    // Initialize the CAN module
   //ETMCanSlaveInitialize();
-  ETMCanSlaveInitialize(CAN_PORT_1, FCY_CLK, ETM_CAN_ADDR_ION_PUMP_BOARD, PIN_LED_TEST_POINT_B, 4);
+  ETMCanSlaveInitialize(CAN_PORT_1, FCY_CLK, ETM_CAN_ADDR_ION_PUMP_BOARD, _PIN_RG13, 4);
   ETMCanSlaveLoadConfiguration(36417, 000, AGILE_REV, FIRMWARE_AGILE_REV, FIRMWARE_BRANCH, FIRMWARE_MINOR_REV, SERIAL_NUMBER);
 
   // Flash LEDs at boot up
