@@ -91,8 +91,9 @@ void DoA36417_000(void){
 
   if(_T3IF){
 
-    slave_board_data.log_data[2] = global_data_A36417_000.analog_input_ion_pump_current.reading_scaled_and_calibrated;
-    slave_board_data.log_data[3] = global_data_A36417_000.analog_input_ion_pump_voltage.reading_scaled_and_calibrated;
+     
+    slave_board_data.log_data[2] = global_data_A36417_000.analog_input_ion_pump_voltage.reading_scaled_and_calibrated;
+    slave_board_data.log_data[3] = global_data_A36417_000.analog_input_ion_pump_current.reading_scaled_and_calibrated;
 
     _T3IF=0;
 
@@ -103,7 +104,7 @@ void DoA36417_000(void){
     ETMAnalogScaleCalibrateADCReading(&global_data_A36417_000.analog_input_15V_monitor);
     ETMAnalogScaleCalibrateADCReading(&global_data_A36417_000.analog_input_minus_5V_monitor);
 
-    unsigned int ion_pump_voltage=global_data_A36417_000.analog_input_ion_pump_voltage.reading_scaled_and_calibrated;
+     unsigned int ion_pump_voltage=global_data_A36417_000.analog_input_ion_pump_voltage.reading_scaled_and_calibrated;
 
     EMCO_control_setpoint=(unsigned int)(UpdatePID(&emco_pid,(EMCO_SETPOINT-(double)ion_pump_voltage), (double) ion_pump_voltage));
 
@@ -111,8 +112,8 @@ void DoA36417_000(void){
     //local_debug_data.debug_8=EMCO_control_setpoint;
 
     //babysitter
-    if(EMCO_control_setpoint>1200){
-        EMCO_control_setpoint=1200;
+    if(EMCO_control_setpoint>2000){
+        EMCO_control_setpoint=2000;
     }
         ETMCanSlaveSetDebugRegister(7, EMCO_control_setpoint);
         //local_debug_data.debug_7=EMCO_control_setpoint;
@@ -499,8 +500,8 @@ void __attribute__((interrupt, no_auto_psv)) _ADCInterrupt(void) {
       global_data_A36417_000.accumulator_counter = 0;
   }
 
-    ETMCanSlaveSetDebugRegister(4, global_data_A36417_000.analog_input_ion_pump_voltage.filtered_adc_reading);
-    ETMCanSlaveSetDebugRegister(5, global_data_A36417_000.analog_input_ion_pump_current.filtered_adc_reading);
+    ETMCanSlaveSetDebugRegister(4, global_data_A36417_000.analog_input_ion_pump_voltage.reading_scaled_and_calibrated);
+    ETMCanSlaveSetDebugRegister(5, global_data_A36417_000.analog_input_ion_pump_current.reading_scaled_and_calibrated);
     ETMCanSlaveSetDebugRegister(6, global_data_A36417_000.analog_input_target_current.filtered_adc_reading);
     //local_debug_data.debug_4=global_data_A36417_000.analog_input_ion_pump_voltage.filtered_adc_reading;
     //local_debug_data.debug_5=global_data_A36417_000.analog_input_ion_pump_current.filtered_adc_reading;
