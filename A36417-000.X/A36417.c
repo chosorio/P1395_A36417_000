@@ -383,22 +383,10 @@ void InitializeA36417(void){
 
    // Initialize the CAN module
   //ETMCanSlaveInitialize();
-  ETMCanSlaveInitialize(CAN_PORT_1, FCY_CLK, ETM_CAN_ADDR_ION_PUMP_BOARD, _PIN_RG13, 4);
-  ETMCanSlaveLoadConfiguration(36417, 000, AGILE_REV, FIRMWARE_AGILE_REV, FIRMWARE_BRANCH, FIRMWARE_MINOR_REV, SERIAL_NUMBER);
+    ETMCanSlaveInitialize(CAN_PORT_1, FCY_CLK, ETM_CAN_ADDR_ION_PUMP_BOARD, _PIN_RG13, 4, _PIN_RA7, _PIN_RG12);
+    ETMCanSlaveLoadConfiguration(36417, 000, FIRMWARE_AGILE_REV, FIRMWARE_BRANCH, FIRMWARE_MINOR_REV);
 
-  // Flash LEDs at boot up
-  __delay32(1000000);
-  ClrWdt();
-  PIN_LED_OPERATIONAL = 1;
-
-  __delay32(1000000);
-  ClrWdt();
-  PIN_LED_TEST_POINT_A = 1;
-
-  __delay32(1000000);
-  ClrWdt();
-  PIN_LED_TEST_POINT_B = 1;
-
+    // DPARKER ADD some Flashy LEDs
 
 }
 

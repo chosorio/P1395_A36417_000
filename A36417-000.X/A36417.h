@@ -161,9 +161,9 @@ RG13 - Digital Output - Led Test Point B
 RG14 - Digital Output - Reset detect
 */
 
-#define PIN_LED_OPERATIONAL       _LATA7
-#define PIN_LED_TEST_POINT_A      _LATG12
-#define PIN_LED_TEST_POINT_B      _LATG13
+//#define PIN_LED_OPERATIONAL       _LATA7  Moved to Can Module
+//#define PIN_LED_TEST_POINT_A      _LATG12 Moved to Can Module
+//#define PIN_LED_TEST_POINT_B      _LATG13 Moved to Can Module
 
 #define PIN_D_OUT_TEST_POINT_E      _LATA6
 
