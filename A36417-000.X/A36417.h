@@ -13,6 +13,7 @@
 
 #include "P1395_CAN_SLAVE.h"
 #include "ETM.h"
+#include "A36417_SETTINGS.h"
 
 #define FCY_CLK     10000000
 
@@ -48,13 +49,16 @@ typedef struct{
     AnalogOutput analog_output_emco_control;
 
     unsigned int accumulator_counter;
-
+    unsigned int control_state;
     unsigned int target_current_high;
     unsigned int target_current_low;
 
     unsigned int trigger_recieved;
     unsigned int sample_level;
     unsigned int pulse_id;
+    unsigned int EMCO_control_setpoint;
+    unsigned int EMCO_enable;
+    unsigned int reset_active;
     
 }IonPumpControlData;
 
@@ -161,9 +165,9 @@ RG13 - Digital Output - Led Test Point B
 RG14 - Digital Output - Reset detect
 */
 
-//#define PIN_LED_OPERATIONAL       _LATA7  Moved to Can Module
-//#define PIN_LED_TEST_POINT_A      _LATG12 Moved to Can Module
-//#define PIN_LED_TEST_POINT_B      _LATG13 Moved to Can Module
+#define PIN_LED_OPERATIONAL_GREEN   _LATA7  //Moved to Can Module
+#define PIN_LED_A_RED               _LATG12 //Moved to Can Module
+#define PIN_LED_B_GREEN             _LATG13 //Moved to Can Module
 
 #define PIN_D_OUT_TEST_POINT_E      _LATA6
 
@@ -219,25 +223,24 @@ RF3  (DAC LDAC)
 
 
 #define SELF_TEST_FAIL_COUNT                    4
-#define ION_PUMP_CURRENT_SCALE_FACTOR           2*.0763 //1V per 2uA
-#define ION_PUMP_CURRENT_OVER_TRIP_POINT        6000 //
 
-#define ION_PUMP_VOLTAGE_SCALE_FACTOR           .0764//1V per 1kV
-#define ION_PUMP_VOLTAGE_UNDER_TRIP_POINT       2900 //2.9kV
-#define ION_PUMP_VOLTAGE_OVER_TRIP_POINT        3300 // 3.3kV
+//#define ION_PUMP_CURRENT_SCALE_FACTOR           2*.0763 //1V per 2uA
+//#define ION_PUMP_CURRENT_OVER_TRIP_POINT        6000 //
+//
+//#define ION_PUMP_VOLTAGE_SCALE_FACTOR           .0764//1V per 1kV
+//#define ION_PUMP_VOLTAGE_UNDER_TRIP_POINT       2900 //2.9kV
+//#define ION_PUMP_VOLTAGE_OVER_TRIP_POINT        3300 // 3.3kV
+//
+//#define TARGET_CURRENT_SCALE_FACTOR             0.0763/5   //placeholder
+//#define TARGET_CURRENT_OVER_TRIP_POINT          555 //placeholder
 
-#define TARGET_CURRENT_SCALE_FACTOR             0.0763/5   //placeholder
-#define TARGET_CURRENT_OVER_TRIP_POINT          555 //placeholder
+//#define _5V_MONITOR_SCALE_FACTOR                0.0763 //
 
-#define _5V_MONITOR_SCALE_FACTOR                0.0763 //
+//#define _15V_MONITOR_SCALE_FACTOR               0.0763 //
 
-#define _15V_MONITOR_SCALE_FACTOR               0.0763 //
+//#define MINUS_5V_MONITOR_SCALE_FACTOR           0.0763 //
 
-#define MINUS_5V_MONITOR_SCALE_FACTOR           0.0763 //
-
-
-#define ANALOG_OUT_SCALE_FACTOR             1
-#define ANALOG_OUT_INTERNAL_SCALE           1
+//#define ANALOG_OUT_INTERNAL_SCALE           1
 
 #define EMCO_SETPOINT                       3000
 
