@@ -18,7 +18,7 @@ void DoA36417_000(void);
 void Reset_Faults(void);
 //void SelfTestA36417(void);
 unsigned int Check_UV_OC_Fault(void);
-unsigned int Check_Supplies(void);
+//unsigned int Check_Supplies(void);
 
 
 volatile unsigned int target_current_flag;
@@ -60,24 +60,15 @@ void DoStateMachine(void){
            global_data_A36417_000.self_test_count = 0;
            while (global_data_A36417_000.control_state == STATE_SELF_TEST) {
              DoA36417_000();
-
-             if (global_data_A36417_000.self_test_count > SELF_TEST_TIME) {
-
+             if (global_data_A36417_000.self_test_count >= SELF_TEST_TIME) {
+               global_data_A36417_000.self_test_count = 0;
                if(Check_UV_OC_Fault() == 0) {
                  global_data_A36417_000.control_state = STATE_OPERATE;
-               }
-               if(Check_Supplies()) {     //fail self test
-                 global_data_A36417_000.control_state = STATE_FAULT;
                }
                if (_FAULT_ION_PUMP_OVER_VOLTAGE) {
                  global_data_A36417_000.control_state = STATE_FAULT;
                }
              }
-
-             if(global_data_A36417_000.self_test_count >= MAX_SELF_TEST_TIME) {
-               global_data_A36417_000.control_state = STATE_FAULT;
-             }
-
            }
            break;
 
@@ -87,7 +78,7 @@ void DoStateMachine(void){
 
             while (global_data_A36417_000.control_state == STATE_OPERATE) {
               DoA36417_000();
-              //ETMCanSlaveDoCan();
+
               if (Check_UV_OC_Fault()) {
                 global_data_A36417_000.control_state = STATE_SELF_TEST;
               }
@@ -163,38 +154,21 @@ void DoA36417_000(void){
 
     ETMCanSlaveSetDebugRegister(8, global_data_A36417_000.EMCO_control_setpoint);
    
-    // Rogue setpoint protection
-    if(global_data_A36417_000.EMCO_control_setpoint>2000){
-        global_data_A36417_000.EMCO_control_setpoint=2000;
+    // Increasing setpoint protection
+    if(global_data_A36417_000.EMCO_control_setpoint > DAC_SETPOINT_CAP){
+        global_data_A36417_000.EMCO_control_setpoint = DAC_SETPOINT_CAP;
     }
     ETMCanSlaveSetDebugRegister(7, global_data_A36417_000.EMCO_control_setpoint);
 
-    global_data_A36417_000.self_test_count++;
         
-//    if (ETMAnalogCheckOverAbsolute(&global_data_A36417_000.analog_input_ion_pump_voltage)) {
-//        //Maybe go to a fault state?
-//           _FAULT_ION_PUMP_OVER_VOLTAGE=1;
-//           //global_data_A36417_000.EMCO_control_setpoint=0;
-//    }
-//    else{
-//        _FAULT_ION_PUMP_OVER_VOLTAGE=0;
-//    }
-//
-//    if (ETMAnalogCheckUnderAbsolute(&global_data_A36417_000.analog_input_ion_pump_voltage)) {
-//           _FAULT_ION_PUMP_UNDER_VOLTAGE=1;
-//    }
-//    else{
-//        _FAULT_ION_PUMP_OVER_VOLTAGE=0;
-//    }
-
     WriteMCP4822(&U11_MCP4822, MCP4822_OUTPUT_A_4096, global_data_A36417_000.EMCO_control_setpoint);
-
 
     ETMCanSlaveSetDebugRegister(1, global_data_A36417_000.analog_input_5V_monitor.reading_scaled_and_calibrated);
     ETMCanSlaveSetDebugRegister(2, global_data_A36417_000.analog_input_15V_monitor.reading_scaled_and_calibrated);
     ETMCanSlaveSetDebugRegister(3, global_data_A36417_000.analog_input_minus_5V_monitor.reading_scaled_and_calibrated);
-
     ETMCanSlaveSetDebugRegister(0xF, global_data_A36417_000.control_state);
+
+    global_data_A36417_000.self_test_count++;
 
 
 // -------------------- CHECK FOR FAULTS ------------------- //
@@ -223,41 +197,41 @@ void DoA36417_000(void){
         _FAULT_ION_PUMP_OVER_CURRENT=0;
     }
 
-    if (ETMAnalogCheckUnderAbsolute(&global_data_A36417_000.analog_input_5V_monitor)) {
-      _FAULT_5V_UV = 1;
-    }else{
-      _FAULT_5V_UV = 0;
-    }
-
-    if (ETMAnalogCheckOverAbsolute(&global_data_A36417_000.analog_input_5V_monitor)) {
-      _FAULT_5V_OV = 1;
-    }else{
-      _FAULT_5V_OV = 0;
-    }
-
-    if (ETMAnalogCheckUnderAbsolute(&global_data_A36417_000.analog_input_15V_monitor)) {
-      _FAULT_15V_UV = 1;
-    }else{
-      _FAULT_15V_UV = 0;
-    }
-
-    if (ETMAnalogCheckOverAbsolute(&global_data_A36417_000.analog_input_15V_monitor)) {
-      _FAULT_15V_OV = 1;
-    }else{
-      _FAULT_15V_OV = 0;
-    }
-
-    if (ETMAnalogCheckUnderAbsolute(&global_data_A36417_000.analog_input_minus_5V_monitor)) {
-      _FAULT_MINUS_5V_UV = 1;
-    }else{
-      _FAULT_MINUS_5V_UV = 0;
-    }
-
-    if (ETMAnalogCheckOverAbsolute(&global_data_A36417_000.analog_input_minus_5V_monitor)) {
-      _FAULT_MINUS_5V_OV = 1;
-    }else{
-      _FAULT_MINUS_5V_OV = 0;
-    }
+//    if (ETMAnalogCheckUnderAbsolute(&global_data_A36417_000.analog_input_5V_monitor)) {
+//      _FAULT_5V_UV = 1;
+//    }else{
+//      _FAULT_5V_UV = 0;
+//    }
+//
+//    if (ETMAnalogCheckOverAbsolute(&global_data_A36417_000.analog_input_5V_monitor)) {
+//      _FAULT_5V_OV = 1;
+//    }else{
+//      _FAULT_5V_OV = 0;
+//    }
+//
+//    if (ETMAnalogCheckUnderAbsolute(&global_data_A36417_000.analog_input_15V_monitor)) {
+//      _FAULT_15V_UV = 1;
+//    }else{
+//      _FAULT_15V_UV = 0;
+//    }
+//
+//    if (ETMAnalogCheckOverAbsolute(&global_data_A36417_000.analog_input_15V_monitor)) {
+//      _FAULT_15V_OV = 1;
+//    }else{
+//      _FAULT_15V_OV = 0;
+//    }
+//
+//    if (ETMAnalogCheckUnderAbsolute(&global_data_A36417_000.analog_input_minus_5V_monitor)) {
+//      _FAULT_MINUS_5V_UV = 1;
+//    }else{
+//      _FAULT_MINUS_5V_UV = 0;
+//    }
+//
+//    if (ETMAnalogCheckOverAbsolute(&global_data_A36417_000.analog_input_minus_5V_monitor)) {
+//      _FAULT_MINUS_5V_OV = 1;
+//    }else{
+//      _FAULT_MINUS_5V_OV = 0;
+//    }
 
   }
   return;
@@ -272,42 +246,42 @@ unsigned int Check_UV_OC_Fault(void) {
     return fault;
 }
 
-unsigned int Check_Supplies(void) {
-    unsigned int fault;
-    fault  = _FAULT_5V_UV;
-    fault |= _FAULT_5V_OV;
-    fault |= _FAULT_15V_UV;
-    fault |= _FAULT_15V_OV;
-    fault |= _FAULT_MINUS_5V_UV;
-    fault |= _FAULT_MINUS_5V_OV;
-
-    return fault;
-}
+//unsigned int Check_Supplies(void) {
+//    unsigned int fault;
+//    fault  = _FAULT_5V_UV;
+//    fault |= _FAULT_5V_OV;
+//    fault |= _FAULT_15V_UV;
+//    fault |= _FAULT_15V_OV;
+//    fault |= _FAULT_MINUS_5V_UV;
+//    fault |= _FAULT_MINUS_5V_OV;
+//
+//    return fault;
+//}
 
 void Reset_Faults(void) {
     _FAULT_ION_PUMP_OVER_CURRENT = 0;
     _FAULT_ION_PUMP_OVER_VOLTAGE = 0;
     _FAULT_ION_PUMP_UNDER_VOLTAGE = 0;
     _FAULT_CAN_COMMUNICATION = 0;
-    _FAULT_5V_UV = 0;
-    _FAULT_5V_OV = 0;
-    _FAULT_15V_UV = 0;
-    _FAULT_15V_OV = 0;
-    _FAULT_MINUS_5V_UV = 0;
-    _FAULT_MINUS_5V_OV = 0;
+//    _FAULT_5V_UV = 0;
+//    _FAULT_5V_OV = 0;
+//    _FAULT_15V_UV = 0;
+//    _FAULT_15V_OV = 0;
+//    _FAULT_MINUS_5V_UV = 0;
+//    _FAULT_MINUS_5V_OV = 0;
 
 }
 
 double UpdatePID(SPid* pid, double error, double reading){
   double pTerm, dTerm, iTerm;
-  pTerm=pid->pGain*error;
+  pTerm = pid->pGain * error;
 
-  pid->iState +=error;
+  pid->iState += error;
   if (pid->iState > pid->iMax){
     pid->iState = pid->iMax;
   }
 
-  else if (pid->iState< pid->iMin){
+  else if (pid->iState < pid->iMin){
     pid->iState = pid->iMin;
   }
 
@@ -319,7 +293,6 @@ double UpdatePID(SPid* pid, double error, double reading){
   ETMCanSlaveSetDebugRegister(0xA, (unsigned int)pTerm);
   ETMCanSlaveSetDebugRegister(0xB, (unsigned int)iTerm);
   ETMCanSlaveSetDebugRegister(0xC, (unsigned int)dTerm);
-
 
   if(pTerm + iTerm - dTerm < 0)
     return 1;
@@ -389,7 +362,7 @@ void InitializeA36417(void){
   target_current = 0;
   target_current_flag = 0;
   
-
+  // Initialize the DAC
   U11_MCP4822.pin_chip_select_not = _PIN_RF2;
   U11_MCP4822.pin_load_dac_not = _PIN_RF3;
   U11_MCP4822.spi_port = ETM_SPI_PORT_1;
@@ -401,10 +374,9 @@ void InitializeA36417(void){
 
   SetupMCP4822(&U11_MCP4822);
 
-     // Initialize the External EEprom
-  ETMEEPromConfigureExternalDevice(EEPROM_SIZE_8K_BYTES, FCY_CLK, 400000, EEPROM_I2C_ADDRESS_0, 1);
 
-//  _CONTROL_SELF_CHECK_ERROR = 0;
+  // Initialize the External EEprom
+  ETMEEPromConfigureExternalDevice(EEPROM_SIZE_8K_BYTES, FCY_CLK, 400000, EEPROM_I2C_ADDRESS_0, 1);
 
  
   // Initialize TMR3
@@ -426,7 +398,7 @@ void InitializeA36417(void){
   _ADIE = 1;
   _ADON = 1;
 
-  //initialize PID control loop variables
+  //Initialize PID control loop variables
   emco_pid.dGain=PID_DGAIN;
   emco_pid.dState=0;
   emco_pid.iState=0;
@@ -439,8 +411,7 @@ void InitializeA36417(void){
   WriteMCP4822(&U11_MCP4822, MCP4822_OUTPUT_A_4096, global_data_A36417_000.EMCO_control_setpoint);
 
 
-     // Initialize the CAN module
-
+  // Initialize the CAN module
   ETMCanSlaveInitialize(CAN_PORT_1, FCY_CLK, ETM_CAN_ADDR_ION_PUMP_BOARD, _PIN_RG13, 4, _PIN_RA7, _PIN_RG12);
   ETMCanSlaveLoadConfiguration(36417, 000, FIRMWARE_AGILE_REV, FIRMWARE_BRANCH, FIRMWARE_MINOR_REV);
 
@@ -516,7 +487,7 @@ void InitializeA36417(void){
   ETMAnalogInitializeOutput(&global_data_A36417_000.analog_output_emco_control,
 			    MACRO_DEC_TO_SCALE_FACTOR_16(EMCO_CTRL_VOLTAGE_SCALE_FACTOR),
 			    OFFSET_ZERO,
-			    ANALOG_OUTPUT_0,
+			    ANALOG_OUTPUT_NO_CALIBRATION,
 			    EMCO_MAX_CTRL_VOLTAGE,
 			    EMCO_MIN_CTRL_VOLTAGE,
 			    0);

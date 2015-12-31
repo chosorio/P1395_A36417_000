@@ -127,12 +127,12 @@ extern IonPumpControlData global_data_A36417_000;
 #define _FAULT_ION_PUMP_OVER_CURRENT             _FAULT_1
 #define _FAULT_ION_PUMP_OVER_VOLTAGE             _FAULT_2
 #define _FAULT_ION_PUMP_UNDER_VOLTAGE            _FAULT_3
-#define _FAULT_5V_OV                             _FAULT_4
-#define _FAULT_5V_UV                             _FAULT_5
-#define _FAULT_15V_OV                            _FAULT_6
-#define _FAULT_15V_UV                            _FAULT_7
-#define _FAULT_MINUS_5V_OV                       _FAULT_8
-#define _FAULT_MINUS_5V_UV                       _FAULT_9
+//#define _FAULT_5V_OV                             _FAULT_4
+//#define _FAULT_5V_UV                             _FAULT_5
+//#define _FAULT_15V_OV                            _FAULT_6
+//#define _FAULT_15V_UV                            _FAULT_7
+//#define _FAULT_MINUS_5V_OV                       _FAULT_8
+//#define _FAULT_MINUS_5V_UV                       _FAULT_9
 
 // -------------------- A36417_000 STATUS BIT CONFIGURATION ------------------------ //
 
@@ -245,10 +245,10 @@ RF3  (DAC LDAC)
 
 //#define ANALOG_OUT_INTERNAL_SCALE           1
 
-#define SELF_TEST_TIME                      300    //500ms
-#define MAX_SELF_TEST_TIME                  400   //2s
+#define SELF_TEST_TIME                      100    //1sec
 
 #define EMCO_SETPOINT                       3000
+#define DAC_SETPOINT_CAP                    2000
 
 #define PID_DGAIN                           .06
 #define PID_IGAIN                           .05
