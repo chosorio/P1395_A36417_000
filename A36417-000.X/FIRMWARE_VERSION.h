@@ -9,8 +9,8 @@
 #define	FIRMWARE_VERSION_H
 
 #define FIRMWARE_AGILE_REV  01
-#define FIRMWARE_BRANCH     1
-#define FIRMWARE_MINOR_REV  12
+#define FIRMWARE_BRANCH     2
+#define FIRMWARE_MINOR_REV  1
 
 
 #endif	/* FIRMWARE_VERSION_H */

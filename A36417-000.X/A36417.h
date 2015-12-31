@@ -8,12 +8,13 @@
 #ifndef __A36417_H
 #define	__A36417_H
 
-
-
-
+#include <p30f6014a.h>
+#include <libpic30.h>
+#include <adc12.h>
+#include <xc.h>
+#include <timer.h>
 #include "P1395_CAN_SLAVE.h"
 #include "ETM.h"
-#include "A36417_SETTINGS.h"
 
 #define FCY_CLK     10000000
 
@@ -37,8 +38,6 @@
   
  */
 
-
-
 typedef struct{
     AnalogInput analog_input_ion_pump_current;
     AnalogInput analog_input_ion_pump_voltage;
@@ -58,6 +57,7 @@ typedef struct{
     unsigned int pulse_id;
     unsigned int EMCO_control_setpoint;
     unsigned int EMCO_enable;
+    unsigned int self_test_count;
     unsigned int reset_active;
     
 }IonPumpControlData;
@@ -82,8 +82,6 @@ extern IonPumpControlData global_data_A36417_000;
 
 // -------- Analog Input Pins ----------//
 
-
-
 #define PIN_A_IN_ION_PUMP_VOLTAGE               _RB3
 #define PIN_A_IN_ION_PUMP_CURRENT               _RB4
 #define PIN_A_IN_5V_MONITOR                     _RB5
@@ -103,17 +101,13 @@ extern IonPumpControlData global_data_A36417_000;
   Conversion rate of 111KHz (27.8 Khz per Channel), 277 Samples per 10mS interrupt
 
   8 Samples per Interrupt, use alternating buffers
-
-
 */
-
 #define ADCON1_SETTING          (ADC_MODULE_OFF & ADC_IDLE_STOP & ADC_FORMAT_INTG & ADC_CLK_AUTO & ADC_AUTO_SAMPLING_ON)
 #define ADCON2_SETTING          (ADC_VREF_AVDD_AVSS & ADC_SCAN_ON & ADC_SAMPLES_PER_INT_8 & ADC_ALT_BUF_ON & ADC_ALT_INPUT_OFF)
 #define ADCON3_SETTING          (ADC_SAMPLE_TIME_4 & ADC_CONV_CLK_SYSTEM & ADC_CONV_CLK_26Tcy)
 #define ADCHS_SETTING           (ADC_CH0_POS_SAMPLEA_AN2 & ADC_CH0_NEG_SAMPLEA_VREFN & ADC_CH0_POS_SAMPLEB_AN2 & ADC_CH0_NEG_SAMPLEB_VREFN) 
 #define ADPCFG_SETTING          (ENABLE_AN3_ANA & ENABLE_AN4_ANA & ENABLE_AN5_ANA & ENABLE_AN6_ANA & ENABLE_AN7_ANA & ENABLE_AN10_ANA & ENABLE_AN11_ANA & ENABLE_AN12_ANA)
 #define ADCSSL_SETTING          (SKIP_SCAN_AN0 & SKIP_SCAN_AN1 & SKIP_SCAN_AN2 & SKIP_SCAN_AN8 & SKIP_SCAN_AN9 & SKIP_SCAN_AN13 & SKIP_SCAN_AN14 &SKIP_SCAN_AN15) //Modified to skip unused inputs
-
 
 
 /*
@@ -127,10 +121,18 @@ extern IonPumpControlData global_data_A36417_000;
 #define PR3_PERIOD_US                  10000   // 10mS
 #define PR3_VALUE_10_MILLISECONDS      12500   //(FCY_CLK_MHZ*PR3_PERIOD_US/8)
 
+
 // -------------------- A36417_000 FAULTS/WARNINGS CONFIGURATION-------------------- //
+#define _FAULT_CAN_COMMUNICATION                 _FAULT_0
 #define _FAULT_ION_PUMP_OVER_CURRENT             _FAULT_1
 #define _FAULT_ION_PUMP_OVER_VOLTAGE             _FAULT_2
 #define _FAULT_ION_PUMP_UNDER_VOLTAGE            _FAULT_3
+#define _FAULT_5V_OV                             _FAULT_4
+#define _FAULT_5V_UV                             _FAULT_5
+#define _FAULT_15V_OV                            _FAULT_6
+#define _FAULT_15V_UV                            _FAULT_7
+#define _FAULT_MINUS_5V_OV                       _FAULT_8
+#define _FAULT_MINUS_5V_UV                       _FAULT_9
 
 // -------------------- A36417_000 STATUS BIT CONFIGURATION ------------------------ //
 
@@ -164,6 +166,7 @@ RG12 - Digital Output - Led Test Point A
 RG13 - Digital Output - Led Test Point B
 RG14 - Digital Output - Reset detect
 */
+#define OLL_LED_ON                  0
 
 #define PIN_LED_OPERATIONAL_GREEN   _LATA7  //Moved to Can Module
 #define PIN_LED_A_RED               _LATG12 //Moved to Can Module
@@ -241,6 +244,9 @@ RF3  (DAC LDAC)
 //#define MINUS_5V_MONITOR_SCALE_FACTOR           0.0763 //
 
 //#define ANALOG_OUT_INTERNAL_SCALE           1
+
+#define SELF_TEST_TIME                      300    //500ms
+#define MAX_SELF_TEST_TIME                  400   //2s
 
 #define EMCO_SETPOINT                       3000
 
